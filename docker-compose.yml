@@ -1,0 +1,36 @@
+# نشر مختبرات صقور الكيمياء على Coolify (Build Pack: Docker Compose)
+#
+# في Coolify:
+#   1. أضيفي TEACHER_CODE في تبويب Environment Variables (إلزامي).
+#   2. الدومين: https://sanabil-shahed.naseir.site على خدمة app (المنفذ 3000)؛ Coolify يتولى HTTPS والبروكسي.
+#   3. البيانات محفوظة في volume اسمه lab-data ولا تضيع عند إعادة النشر.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      # إلزامي: رمز دخول لوحة المعلمة (لا يوجد رمز افتراضي)
+      - TEACHER_CODE=${TEACHER_CODE:?TEACHER_CODE is required}
+      - TEACHER_TOKEN_HOURS=${TEACHER_TOKEN_HOURS:-8}
+      - PORT=3000
+      - LAB_DATA_DIR=/app/data
+      # الخادم خلف بروكسي Coolify (Traefik)، فنثق بطبقة واحدة لمعرفة عنوان الزائر الحقيقي
+      - TRUST_PROXY=1
+      # يجعل Coolify يربط الدومين بالمنفذ 3000 تلقائياً
+      - SERVICE_FQDN_APP_3000
+    expose:
+      - "3000"
+    volumes:
+      - lab-data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  lab-data:

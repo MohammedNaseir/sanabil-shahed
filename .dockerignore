@@ -1,0 +1,15 @@
+node_modules
+dist
+dist-server
+dist-standalone
+archive
+data
+tests
+.env
+.env.*
+!.env.example
+.aistudio
+*.log
+logo.pam
+bun.lock
+.git

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>مختبرات صقور الكيمياء | منصة سنابل التعليمية</title>
+    <meta name="description" content="منصة تعليمية كيميائية تفاعلية متطورة تضم مختبر السيليكون ومختبر الذرة وفق منهاج الكيمياء للصف العاشر - دولة فلسطين | إعداد وإشراف أ. شهد نصير." />
+    <meta property="og:title" content="مختبرات صقور الكيمياء | منصة سنابل التعليمية" />
+    <meta property="og:description" content="منصة تعليمية كيميائية تفاعلية متطورة تضم مختبر السيليكون ومختبر الذرة وفق منهاج الكيمياء للصف العاشر - دولة فلسطين | إعداد وإشراف أ. شهد نصير." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#100e0c" />
+    <link rel="icon" href="/sanabil-logo.png" />
+    <script>
+      // نطبّق الوضع (داكن/فاتح) قبل رسم الصفحة لتجنّب الوميض
+      (function () {
+        var t = null;
+        try { t = localStorage.getItem('shhd_theme'); } catch (e) {}
+        if (t !== 'light' && t !== 'dark') {
+          t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.setAttribute('content', t === 'light' ? '#f8f4ec' : '#100e0c');
+      })();
+    </script>
+  </head>
+  <body class="antialiased">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,19 @@
+node_modules/
+build/
+dist/
+dist-server/
+dist-standalone/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# بيانات الطلاب الحقيقية لا تُرفع أبداً
+data/*.json
+data/backups/
+
+# ملفات محلية لا تُنشر (مرجعية/مؤقتة/كبيرة)
+archive/
+.aistudio/
+logo.pam

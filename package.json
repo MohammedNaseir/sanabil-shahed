@@ -1,0 +1,45 @@
+{
+  "name": "shhd-chemistry-labs",
+  "private": true,
+  "version": "1.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "dev": "tsx server.ts",
+    "build": "vite build && node scripts/precompress.js && npm run build:server && npm run build:standalone",
+    "build:server": "esbuild server.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-server/server.js",
+    "build:standalone": "vite build --config vite.standalone.config.ts && node scripts/make-standalone.js",
+    "start": "node dist-server/server.js --production",
+    "preview": "vite preview",
+    "clean": "node -e \"for (const d of ['dist','dist-server','dist-standalone']) require('fs').rmSync(d,{recursive:true,force:true})\"",
+    "lint": "tsc --noEmit",
+    "test": "tsx --test tests/server.test.ts tests/scoreQueue.test.ts tests/routing.test.ts tests/content.test.ts"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@fontsource/cairo": "^5.3.0",
+    "@fontsource/tajawal": "^5.3.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/canvas-confetti": "^1.9.0",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "autoprefixer": "^10.4.21",
+    "canvas-confetti": "^1.9.4",
+    "esbuild": "^0.28.0",
+    "lucide-react": "^0.546.0",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.21.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  }
+}
