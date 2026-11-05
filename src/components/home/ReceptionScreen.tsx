@@ -40,19 +40,19 @@ export const ReceptionScreen: React.FC<ReceptionScreenProps> = ({ onEnterLab }) 
         <section className="stagger order-2 lg:order-1 text-right">
           <p className="flex items-center gap-3 text-[13px] text-amber-400 font-medium">
             <span className="h-px w-10 bg-amber-400/60" aria-hidden="true" />
-            المنهاج الفلسطيني • مختبرات افتراضية
+            المنهاج الفلسطيني • مراجعة فصل الذرة والعناصر
           </p>
 
           <h1 className="mt-4 font-display text-[2.9rem] leading-[1.15] sm:text-7xl lg:text-[5.4rem] text-white">
-            مختبرات
+            مختبر أ. شهد
             <span className="block text-amber-400">صقور الكيمياء</span>
           </h1>
 
           <p className="mt-6 max-w-xl text-lg sm:text-2xl leading-relaxed text-slate-100 font-display font-medium">
-            مرحبًا بكم في عالم مختبرات صقور الكيمياء… حيث تبدأ مغامرة العقل والاكتشاف
+            «كل اكتشاف يبدأ بسؤال… استعدوا لرحلة جديدة في عالم العناصر!»
           </p>
           <p className="mt-3 max-w-xl text-[15px] sm:text-base leading-loose text-slate-400">
-            من سنابل، وبشغف الكيمياء، نفتح أبواب الأسئلة، ونفكّر كيميائيًا، ونتحدى عقولنا لنصل إلى الإجابة
+            مرحبًا بكم يا صقور الكيمياء! اليوم مراجعة على شكل ألعاب وتحديات: نراجع فصل الذرة والعناصر كاملًا بالأنشطة والألعاب، ونجمع النقاط، ونرى من يصبح «صقر الكيمياء».
           </p>
 
           <div className="mt-9 flex flex-col sm:flex-row sm:items-center gap-5">
@@ -76,8 +76,8 @@ export const ReceptionScreen: React.FC<ReceptionScreenProps> = ({ onEnterLab }) 
           {/* أرقام المختبر */}
           <dl className="mt-12 grid grid-cols-3 max-w-md border-t hairline pt-5">
             {[
-              ['٢', 'مختبران'],
-              ['١٢', 'محطة ووجهة'],
+              ['٢', 'مرحلتان'],
+              ['٢٧', 'محطة ولعبة'],
               ['١٠', 'الصف'],
             ].map(([n, label]) => (
               <div key={label} className="border-s hairline first:border-s-0 ps-4 first:ps-0">

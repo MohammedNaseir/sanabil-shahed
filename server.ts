@@ -5,13 +5,15 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import {
-  SILICON_GAME_IDS,
-  SILICON_MAX_SCORE,
-
-  isSiliconGameId,
-  isAtomicTaskId,
-  sumAtomicPoints,
-} from './src/data/atomicTasks';
+  TASK_POINTS,
+  isTaskId,
+  labTotals,
+  atomFinalDone,
+  atomGateDone,
+  stationDoneId,
+} from './src/content/tasks';
+import { ATOM_GATES } from './src/content/atom';
+import { ELEMENT_LABS } from './src/content/elements';
 
 // يُشغَّل الخادم دائماً من مجلد المشروع، فنعتمد عليه كجذر.
 const ROOT = process.cwd();
@@ -111,7 +113,7 @@ function requireTeacher(req: Request, res: Response, next: NextFunction): void {
 const DATA_DIR = path.resolve(process.env.LAB_DATA_DIR || path.join(ROOT, 'data'));
 const DB_FILE = path.join(DATA_DIR, 'lab-store.json');
 
-type SiliconScores = Record<typeof SILICON_GAME_IDS[number], number>;
+type LabPoints = { at: number; ca: number; su: number; si: number };
 
 export interface StudentRecord {
   id: string;
@@ -126,12 +128,12 @@ export interface StudentRecord {
   rejectionReason?: string;
   falconTitle: string;
   affiliation: string;
-  scores: SiliconScores;
-  completedGames: string[];
-  atomicTasks: string[];
-  siliconPoints: number;
-  atomicPoints: number;
+  /** نقاط كل مهمة (وجود المفتاح = حاول الطالب، والقيمة نقاط أول محاولة). */
+  tasks: Record<string, number>;
+  labPoints: LabPoints;
   totalPoints: number;
+  /** نقاط النسخة السابقة من المختبر (محفوظة للرجوع إليها، لا تُحتسب). */
+  legacy?: Record<string, unknown>;
   /** يزيد عند تصفير المعلمة للنقاط حتى ترفض الإرسالات القديمة. */
   scoreEpoch: number;
   lastActive: number;
@@ -143,6 +145,8 @@ export interface LabSessionConfig {
   lessonName: string;
   teacherName: string;
   organization: string;
+  /** المعلمة فتحت مختبر العناصر للصف كله. */
+  elementsUnlocked: boolean;
 }
 
 interface DBStore {
@@ -152,33 +156,46 @@ interface DBStore {
 
 const DEFAULT_SESSION: LabSessionConfig = {
   isOpen: true,
-  announcement: 'مرحباً بكم يا صقور الكيمياء في مختبر أ. شهد نصير — رحلة استكشاف أسرار السيليكون ومركباته!',
-  lessonName: 'درس السيليكون ومركباته — الكيمياء الصف العاشر',
+  announcement: 'مرحبًا بكم يا صقور الكيمياء! اليوم مراجعة على شكل ألعاب وتحديات: نراجع فصل الذرة والعناصر ونجمع النقاط، ونرى من يصبح «صقر الكيمياء».',
+  lessonName: 'مراجعة فصل الذرة والعناصر — الكيمياء الصف العاشر',
   teacherName: 'أ. شهد نصير',
   organization: 'منصة سنابل التعليمية',
+  elementsUnlocked: false,
 };
 
-function emptyScores(): SiliconScores {
-  return { falcon: 0, cipher: 0, flasks: 0, furnace: 0, detective: 0, rescue: 0 };
+function recalcTotals(s: StudentRecord) {
+  const t = labTotals(s.tasks);
+  s.labPoints = { at: t.at, ca: t.ca, su: t.su, si: t.si };
+  s.totalPoints = t.total;
 }
 
-function recalcTotals(s: StudentRecord) {
-  s.siliconPoints = SILICON_GAME_IDS.reduce((sum, g) => sum + (s.scores[g] || 0), 0);
-  s.atomicPoints = sumAtomicPoints(s.atomicTasks);
-  s.totalPoints = s.siliconPoints + s.atomicPoints;
+function cleanTasks(raw: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const [id, v] of Object.entries(raw as Record<string, unknown>)) {
+    const n = Number(v);
+    if (isTaskId(id) && Number.isFinite(n)) out[id] = Math.max(0, Math.min(TASK_POINTS[id], Math.floor(n)));
+  }
+  return out;
+}
+
+/** ملخّص الإنجاز للوحة المعلمة ولوحة الشرف. */
+function progressSummary(s: StudentRecord) {
+  return {
+    atomGates: ATOM_GATES.filter((_, i) => atomGateDone(s.tasks, i)).length,
+    atomFinal: atomFinalDone(s.tasks),
+    elementStations: ELEMENT_LABS.reduce((a, L) => a + L.stations.filter(st => s.tasks[stationDoneId(L.id, st.id)] !== undefined).length, 0),
+    attempted: Object.keys(s.tasks).length,
+  };
 }
 
 /** يحوّل السجلات القديمة إلى الشكل الجديد دون فقدان بيانات. */
 function normalizeStudent(raw: Partial<StudentRecord> & { id: string }): StudentRecord {
-  const scores = emptyScores();
-  const rawScores = (raw.scores || {}) as Record<string, unknown>;
-  for (const g of SILICON_GAME_IDS) {
-    const v = Number(rawScores[g]);
-    scores[g] = Number.isFinite(v) && v > 0 ? Math.min(Math.floor(v), SILICON_MAX_SCORE) : 0;
-  }
-  const atomicTasks = Array.from(new Set(
-    [...(raw.atomicTasks || []), ...Object.keys(rawScores)].filter(isAtomicTaskId)
-  ));
+  const old = raw as Record<string, unknown>;
+  // نقاط النسخة السابقة (ألعاب السيليكون ووجهات الذرة القديمة) نحفظها كما هي دون احتسابها
+  const legacy = raw.legacy ?? (old.scores || old.atomicTasks || old.completedGames
+    ? { scores: old.scores, completedGames: old.completedGames, atomicTasks: old.atomicTasks, totalPoints: old.totalPoints }
+    : undefined);
   const s: StudentRecord = {
     id: raw.id,
     key: raw.key,
@@ -190,12 +207,10 @@ function normalizeStudent(raw: Partial<StudentRecord> & { id: string }): Student
     rejectionReason: raw.rejectionReason,
     falconTitle: raw.falconTitle || 'صقر كيميائي - باحث مختبر',
     affiliation: raw.affiliation || 'صقور أ. شهد في منصة سنابل',
-    scores,
-    completedGames: (raw.completedGames || []).filter(isSiliconGameId),
-    atomicTasks,
-    siliconPoints: 0,
-    atomicPoints: 0,
+    tasks: cleanTasks(raw.tasks),
+    labPoints: { at: 0, ca: 0, su: 0, si: 0 },
     totalPoints: 0,
+    ...(legacy ? { legacy } : {}),
     scoreEpoch: Number(raw.scoreEpoch) || 0,
     lastActive: Number(raw.lastActive) || 0,
   };
@@ -260,8 +275,8 @@ setInterval(() => backupDB('daily'), 60 * 60 * 1000).unref();
 
 /** نسخة الطالب الآمنة للإرسال (بدون المفتاح السري). */
 function publicStudent(s: StudentRecord) {
-  const { key: _key, pinHash: _pin, ...rest } = s;
-  return rest;
+  const { key: _key, pinHash: _pin, legacy: _legacy, ...rest } = s;
+  return { ...rest, summary: progressSummary(s) };
 }
 
 function isOnline(s: StudentRecord, now = Date.now()) {
@@ -427,7 +442,7 @@ app.get('/api/student/status/:id', (req: Request, res: Response): void => {
     return;
   }
   student.lastActive = Date.now();
-  res.json({ student: publicStudent(student), sessionIsOpen: store.session.isOpen, announcement: store.session.announcement });
+  res.json({ student: publicStudent(student), sessionIsOpen: store.session.isOpen, announcement: store.session.announcement, elementsUnlocked: store.session.elementsUnlocked });
 });
 
 app.post('/api/student/heartbeat', (req: Request, res: Response): void => {
@@ -441,12 +456,12 @@ app.post('/api/student/heartbeat', (req: Request, res: Response): void => {
 });
 
 /**
- * إرسال نتيجة.
- * - لعبة سيليكون: { studentId, studentKey, gameId, score, epoch } — نحتفظ بأفضل نتيجة.
- * - مهمة ذرة:   { studentId, studentKey, taskId, epoch } — النقاط من قائمة الخادم، ولا تُحسب مرتين.
+ * إرسال نتيجة مهمة: { studentId, studentKey, taskId, points, epoch }
+ * - المهمة يجب أن تكون من جدول المحتوى، والنقاط بين 0 وأقصى نقاطها.
+ * - أول محاولة فقط تُحتسب (كما في المختبر): الإرسال المكرر يُقبل ولا يغيّر شيئاً.
  */
 app.post('/api/student/score', (req: Request, res: Response): void => {
-  const { studentId, studentKey, gameId, taskId, score, epoch } = req.body || {};
+  const { studentId, studentKey, taskId, points, epoch } = req.body || {};
   const student = typeof studentId === 'string' ? store.students[studentId] : undefined;
   if (!student) {
     res.status(404).json({ error: 'الصقر غير موجود', code: 'not_found' });
@@ -465,21 +480,15 @@ app.post('/api/student/score', (req: Request, res: Response): void => {
     return;
   }
 
-  if (isSiliconGameId(gameId)) {
-    if (typeof score !== 'number' || !Number.isFinite(score) || score < 0 || score > SILICON_MAX_SCORE) {
-      res.status(400).json({ error: 'قيمة النتيجة غير صالحة', code: 'invalid_score' });
-      return;
-    }
-    const clean = Math.floor(score);
-    if (clean > (student.scores[gameId] || 0)) student.scores[gameId] = clean;
-    if (!student.completedGames.includes(gameId)) student.completedGames.push(gameId);
-  } else if (isAtomicTaskId(taskId ?? gameId)) {
-    const id = (taskId ?? gameId) as string;
-    if (!student.atomicTasks.includes(id)) student.atomicTasks.push(id);
-  } else {
-    res.status(400).json({ error: 'معرّف اللعبة أو المهمة غير معروف', code: 'unknown_task' });
+  if (!isTaskId(taskId)) {
+    res.status(400).json({ error: 'معرّف المهمة غير معروف', code: 'unknown_task' });
     return;
   }
+  if (typeof points !== 'number' || !Number.isInteger(points) || points < 0 || points > TASK_POINTS[taskId]) {
+    res.status(400).json({ error: 'قيمة النقاط غير صالحة', code: 'invalid_points' });
+    return;
+  }
+  if (student.tasks[taskId] === undefined) student.tasks[taskId] = points;
 
   recalcTotals(student);
   student.lastActive = Date.now();
@@ -491,17 +500,15 @@ app.get('/api/leaderboard', (_req: Request, res: Response) => {
   const now = Date.now();
   const list = Object.values(store.students)
     .filter(s => s.status === 'approved')
-    .sort((a, b) => (b.totalPoints - a.totalPoints) || (b.completedGames.length - a.completedGames.length))
+    .sort((a, b) => (b.totalPoints - a.totalPoints) || (Object.keys(b.tasks).length - Object.keys(a.tasks).length))
     .map(s => ({
       id: s.id,
       fullName: s.fullName,
       chemicalId: s.chemicalId || s.id,
       falconTitle: s.falconTitle,
-      scores: s.scores,
-      completedGamesCount: s.completedGames.length,
-      siliconPoints: s.siliconPoints,
-      atomicPoints: s.atomicPoints,
+      labPoints: s.labPoints,
       totalPoints: s.totalPoints,
+      summary: progressSummary(s),
       isOnline: isOnline(s, now),
     }));
   res.json({ leaderboard: list });
@@ -544,7 +551,10 @@ app.get('/api/teacher/students', requireTeacher, (_req: Request, res: Response) 
   const now = Date.now();
   const enhanced = Object.values(store.students)
     .sort((a, b) => b.createdAt - a.createdAt)
-    .map(s => ({ ...publicStudent(s), isOnline: isOnline(s, now) }));
+    .map(s => {
+      const { tasks: _t, ...pub } = publicStudent(s);
+      return { ...pub, isOnline: isOnline(s, now) };
+    });
   res.json({
     students: enhanced,
     session: store.session,
@@ -610,8 +620,9 @@ app.post('/api/teacher/reset-pin', requireTeacher, (req: Request, res: Response)
 });
 
 app.post('/api/teacher/session', requireTeacher, (req: Request, res: Response) => {
-  const { isOpen, announcement } = req.body || {};
+  const { isOpen, announcement, elementsUnlocked } = req.body || {};
   if (typeof isOpen === 'boolean') store.session.isOpen = isOpen;
+  if (typeof elementsUnlocked === 'boolean') store.session.elementsUnlocked = elementsUnlocked;
   if (typeof announcement === 'string') store.session.announcement = announcement.trim().slice(0, 500);
   saveDB();
   res.json({ success: true, session: store.session });
@@ -629,9 +640,7 @@ app.post('/api/teacher/delete-student', requireTeacher, (req: Request, res: Resp
 app.post('/api/teacher/reset-scores', requireTeacher, (_req: Request, res: Response) => {
   backupDB('before-reset');
   for (const s of Object.values(store.students)) {
-    s.scores = emptyScores();
-    s.completedGames = [];
-    s.atomicTasks = [];
+    s.tasks = {};
     s.scoreEpoch = (s.scoreEpoch || 0) + 1;
     recalcTotals(s);
   }

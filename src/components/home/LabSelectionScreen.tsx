@@ -1,12 +1,15 @@
 import React from 'react';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Lock } from 'lucide-react';
 import { AtelierBackdrop } from './AtelierBackdrop';
 import { ThemeToggle } from '../ThemeToggle';
 import { sounds } from '../../utils/audio';
 
 interface LabSelectionScreenProps {
-  onSelectSiliconLab: () => void;
-  onSelectAtomicLab: () => void;
+  onSelectAtomLab: () => void;
+  onSelectElementsLab: () => void;
+  elementsUnlocked: boolean;
+  atomProgress: string;
+  elementsProgress: string;
   onBackToReception: () => void;
   studentPoints?: number;
   studentName?: string;
@@ -24,10 +27,12 @@ interface LabDoorProps {
   accent: 'gold' | 'patina';
   onEnter: () => void;
   cta: string;
+  locked?: string;
+  progress?: string;
 }
 
 /** «باب» المختبر: بطاقة عنصر كبيرة بإطار رفيع بدل البطاقات المتوهجة. */
-const LabDoor: React.FC<LabDoorProps> = ({ index, symbol, number, title, subtitle, description, facts, accent, onEnter, cta }) => {
+const LabDoor: React.FC<LabDoorProps> = ({ index, symbol, number, title, subtitle, description, facts, accent, onEnter, cta, locked, progress }) => {
   const tone = accent === 'gold'
     ? { text: 'text-amber-400', btn: 'bg-amber-500 hover:bg-amber-400 text-slate-950', line: 'bg-amber-400' }
     : { text: 'text-cyan-400', btn: 'bg-cyan-500 hover:bg-cyan-400 text-slate-950', line: 'bg-cyan-400' };
@@ -46,6 +51,13 @@ const LabDoor: React.FC<LabDoorProps> = ({ index, symbol, number, title, subtitl
       </div>
 
       <p className="text-[15px] leading-loose text-slate-300">{description}</p>
+      {progress && <p className="text-[13px] font-mono text-amber-300">{progress}</p>}
+      {locked && (
+        <p className="flex items-start gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[13px] text-amber-200">
+          <Lock className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
+          {locked}
+        </p>
+      )}
 
       <ul className="flex flex-wrap gap-x-5 gap-y-2 text-[13px] text-slate-400">
         {facts.map(f => (
@@ -75,8 +87,11 @@ const LabDoor: React.FC<LabDoorProps> = ({ index, symbol, number, title, subtitl
 };
 
 export const LabSelectionScreen: React.FC<LabSelectionScreenProps> = ({
-  onSelectSiliconLab,
-  onSelectAtomicLab,
+  onSelectAtomLab,
+  onSelectElementsLab,
+  elementsUnlocked,
+  atomProgress,
+  elementsProgress,
   onBackToReception,
   studentPoints = 0,
   studentName,
@@ -126,28 +141,31 @@ export const LabSelectionScreen: React.FC<LabSelectionScreenProps> = ({
 
         <div className="stagger grid md:grid-cols-2 gap-5 lg:gap-8">
           <LabDoor
-            index="01 — المختبر الأساسي"
-            symbol="Si"
-            number="14"
-            title="مختبر السيليكون"
-            subtitle="عنصر السيليكون ومركباته • الوحدة الأولى"
-            description="ست محطات: سباق صقور السيليكون، فك شيفرة السيليكا والترانزستور، الدوارق الغامضة، فرن الاستخلاص، المحقق الكيميائي، وطوق النجاة."
-            facts={['6 محطات تفاعلية', 'موازنة المعادلات', 'شهادة إتقان (52 نقطة)']}
-            accent="gold"
-            cta="دخول مختبر السيليكون"
-            onEnter={onSelectSiliconLab}
+            index="01 — المرحلة الأولى"
+            symbol="He"
+            number="2"
+            title="مختبر الذرة"
+            subtitle="العلماء والنماذج والتجارب الذرية"
+            description="ست بوابات حول ذرة دوّارة: رحلة الذرة عبر الزمن، فكّر واستنتج، فسّر، اكتشف الخطأ، ماذا لو؟، والتحقيق النهائي."
+            facts={['سباق تتابع وذاكرة', 'بالونات وتقارير', 'لوحات الغرق والسلسلة والأدلة']}
+            accent="patina"
+            cta="ادخل قضايا الذرة وتجاربها"
+            progress={atomProgress}
+            onEnter={onSelectAtomLab}
           />
           <LabDoor
-            index="02 — المختبر المرافق"
-            symbol="Au"
-            number="79"
-            title="مختبر الذرة"
-            subtitle="بنية الذرة والنماذج الذرية"
-            description="رحلة عبر الزمن من ديمقريطس ودالتون إلى طومسون ورذرفورد: تجارب أشعة المهبط وصفيحة الذهب، وتفسير الظواهر، والتحقيق في الأخطاء العلمية."
-            facts={['قطار الزمن والعلماء', 'محاكي ذرة ثلاثي الأبعاد', 'الشهادة الذرية الذهبية']}
-            accent="patina"
-            cta="دخول مختبر الذرة"
-            onEnter={onSelectAtomicLab}
+            index="02 — المرحلة الثانية"
+            symbol="Ca"
+            number="20"
+            title="مختبر العناصر"
+            subtitle="الكالسيوم والكبريت والسيليكون"
+            description="تجربتان تنفّذهما بنفسك لكل عنصر (الماء، التحليل الكهربائي، المجهر، الاحتراق، شبه الموصل، الاستخلاص) ثم خمس ألعاب مراجعة."
+            facts={['6 تجارب افتراضية', 'صاروخ السرعة', 'دفتر الباحث']}
+            accent="gold"
+            cta={elementsUnlocked ? 'ادخل مختبر العناصر' : 'كيف أفتحه؟'}
+            progress={elementsProgress}
+            locked={elementsUnlocked ? undefined : 'يُفتح بعد إنجاز «مختبر التحقيق النهائي» في مختبر الذرة.'}
+            onEnter={onSelectElementsLab}
           />
         </div>
       </main>

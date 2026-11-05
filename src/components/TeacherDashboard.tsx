@@ -212,6 +212,15 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onClose, onR
     onRefreshData?.();
   };
 
+  const handleToggleElements = async () => {
+    if (!token || !session) return;
+    sounds.click();
+    setIsUpdatingSession(true);
+    await teacherAction('/api/teacher/session', { elementsUnlocked: !session.elementsUnlocked });
+    setIsUpdatingSession(false);
+    onRefreshData?.();
+  };
+
   const handleSaveAnnouncement = async () => {
     if (!token) return;
     sounds.correct();
@@ -534,13 +543,11 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onClose, onR
                           <th className="p-3">اسم الباحث</th>
                           <th className="p-3">رقم الطالب</th>
                           <th className="p-3">الحالة</th>
-                          <th className="p-3">السباق</th>
-                          <th className="p-3">الشيفرة</th>
-                          <th className="p-3">الدوارق</th>
-                          <th className="p-3">الفرن</th>
-                          <th className="p-3">المحقق</th>
-                          <th className="p-3">طوق النجاة</th>
-                          <th className="p-3">مختبر الذرة</th>
+                          <th className="p-3">الذرة</th>
+                          <th className="p-3">الكالسيوم</th>
+                          <th className="p-3">الكبريت</th>
+                          <th className="p-3">السيليكون</th>
+                          <th className="p-3">الإنجاز</th>
                           <th className="p-3">المجموع ⭐</th>
                           <th className="p-3 text-center">إجراء</th>
                         </tr>
@@ -564,13 +571,13 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onClose, onR
                                 <span className="text-[10px] text-slate-500">غير متصل</span>
                               )}
                             </td>
-                            <td className="p-3 font-bold text-slate-300">{student.scores.falcon || '—'}</td>
-                            <td className="p-3 font-bold text-slate-300">{student.scores.cipher || '—'}</td>
-                            <td className="p-3 font-bold text-slate-300">{student.scores.flasks || '—'}</td>
-                            <td className="p-3 font-bold text-slate-300">{student.scores.furnace || '—'}</td>
-                            <td className="p-3 font-bold text-slate-300">{student.scores.detective || '—'}</td>
-                            <td className="p-3 font-bold text-slate-300">{student.scores.rescue || '—'}</td>
-                            <td className="p-3 font-bold text-cyan-300">{student.atomicPoints || '—'}</td>
+                            <td className="p-3 font-bold text-cyan-300">{student.labPoints?.at || '—'}</td>
+                            <td className="p-3 font-bold text-slate-300">{student.labPoints?.ca || '—'}</td>
+                            <td className="p-3 font-bold text-slate-300">{student.labPoints?.su || '—'}</td>
+                            <td className="p-3 font-bold text-slate-300">{student.labPoints?.si || '—'}</td>
+                            <td className="p-3 text-[11px] text-slate-400 whitespace-nowrap">
+                              بوابات {student.summary?.atomGates ?? 0}/6 · محطات {student.summary?.elementStations ?? 0}/21
+                            </td>
                             <td className="p-3 font-black text-amber-300 text-sm whitespace-nowrap">
                               ⭐ {student.totalPoints}
                             </td>
@@ -659,7 +666,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onClose, onR
                             <div>
                               <span className="font-bold text-sm text-white block">{student.fullName}</span>
                               <span className="text-[10px] text-slate-400">
-                                {student.completedGames.length} محطات سيليكون من أصل 6 • السيليكون {student.siliconPoints ?? 0} • الذرة {student.atomicPoints ?? 0}
+                                الذرة {student.labPoints?.at ?? 0} • الكالسيوم {student.labPoints?.ca ?? 0} • الكبريت {student.labPoints?.su ?? 0} • السيليكون {student.labPoints?.si ?? 0}
                               </span>
                             </div>
                           </div>
@@ -698,6 +705,22 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onClose, onR
                     >
                       <Power className="w-4 h-4" />
                       <span>{session?.isOpen ? 'إغلاق المختبر الآن' : 'فتح المختبر لاستقبال الطلاب'}</span>
+                    </button>
+                  </div>
+
+                  {/* فتح مختبر العناصر للصف كله */}
+                  <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-3">
+                    <h5 className="text-sm font-black text-white">مختبر العناصر (المرحلة الثانية)</h5>
+                    <p className="text-xs text-slate-400">
+                      يُفتح تلقائياً لكل طالب بعد إنجاز «مختبر التحقيق النهائي» في مختبر الذرة. يمكنكِ فتحه الآن لكل الصف (مثلاً لبدء حصة الكالسيوم مباشرة).
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleToggleElements}
+                      disabled={isUpdatingSession}
+                      className={`px-4 py-2.5 rounded-xl font-black text-xs transition-all ${session?.elementsUnlocked ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'}`}
+                    >
+                      {session?.elementsUnlocked ? 'إعادة القفل (يُفتح بعد مختبر الذرة)' : 'فتح مختبر العناصر للجميع'}
                     </button>
                   </div>
 
@@ -752,7 +775,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onClose, onR
         {/* Certificate Inspection Modal */}
         {selectedStudentForCert && (
           <ChemistryCertificateModal
-            student={{ ...selectedStudentForCert, totalPoints: selectedStudentForCert.siliconPoints ?? selectedStudentForCert.totalPoints }}
+            student={selectedStudentForCert}
             onClose={() => setSelectedStudentForCert(null)}
           />
         )}

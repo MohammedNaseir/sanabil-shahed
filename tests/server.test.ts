@@ -45,7 +45,7 @@ async function startServer(env: Record<string, string> = {}, seed?: unknown) {
   child.stdout?.on('data', d => { output += d; });
   child.stderr?.on('data', d => { output += d; });
   const base = `http://127.0.0.1:${port}`;
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 300; i++) {
     try {
       const r = await fetch(`${base}/api/health`);
       if (r.ok) break;
@@ -103,7 +103,7 @@ test('دورة الطالب الكاملة: تسجيل، اعتماد، نقاط
   assert.ok(!JSON.stringify(stored).includes('4821'), 'الرقم السري لا يُحفظ نصاً');
 
   // لا تُقبل النقاط قبل الاعتماد
-  r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, gameId: 'falcon', score: 5, epoch: 0 });
+  r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, taskId: 'at.0.0', points: 1, epoch: 0 });
   assert.equal(r.status, 403);
   assert.equal(r.data.code, 'not_approved');
 
@@ -132,37 +132,46 @@ test('دورة الطالب الكاملة: تسجيل، اعتماد، نقاط
   assert.equal(r.data.student.status, 'approved');
 
   // مفتاح خاطئ
-  r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: 'nope', gameId: 'falcon', score: 5, epoch: 0 });
+  r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: 'nope', taskId: 'at.0.0', points: 1, epoch: 0 });
   assert.equal(r.status, 403);
   assert.equal(r.data.code, 'bad_key');
 
-  // نتائج غير صالحة
-  for (const score of [-1, 1e9, 'x', null]) {
-    r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, gameId: 'falcon', score, epoch: 0 });
-    assert.equal(r.status, 400, `score=${score}`);
+  // مهمة مجهولة أو نقاط غير صالحة (أكثر من نقاط المهمة، سالبة، كسرية، نص)
+  r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, taskId: 'quiz_hacker', points: 1, epoch: 0 });
+  assert.equal(r.status, 400);
+  for (const points of [-1, 99, 1.5, 'x', null]) {
+    r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, taskId: 'at.0.0', points, epoch: 0 });
+    assert.equal(r.status, 400, `points=${points}`);
   }
 
-  // السيليكون: أفضل نتيجة فقط
-  r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, gameId: 'falcon', score: 7, epoch: 0 });
+  // أول محاولة فقط تُحتسب: صفر ثم محاولة بنقطة لا تغيّر شيئاً
+  r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, taskId: 'at.0.0', points: 0, epoch: 0 });
   assert.equal(r.status, 200);
-  r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, gameId: 'falcon', score: 4, epoch: 0 });
-  assert.equal(r.data.student.scores.falcon, 7);
+  r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, taskId: 'at.0.0', points: 1, epoch: 0 });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.student.tasks['at.0.0'], 0, 'المحاولة الأولى هي التي تبقى');
 
-  // الذرة: مهمة معروفة تُحتسب مرة واحدة، والمجهولة تُرفض
-  r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, taskId: 'quiz_dalton', epoch: 0 });
-  assert.equal(r.status, 200);
-  const atomicAfterOne = r.data.student.atomicPoints;
-  assert.ok(atomicAfterOne > 0);
-  r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, taskId: 'quiz_dalton', epoch: 0 });
-  assert.equal(r.data.student.atomicPoints, atomicAfterOne, 'لا تُحتسب المهمة مرتين');
-  r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, taskId: 'quiz_hacker', epoch: 0 });
-  assert.equal(r.status, 400);
+  // نقاط لكل مختبر
+  await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, taskId: 'at.3.9' , points: 2, epoch: 0 });
+  r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, taskId: 'at.1.0', points: 2, epoch: 0 });
+  r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, taskId: 'ca.g4.0', points: 1, epoch: 0 });
+  r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, taskId: 'ca.c2.done', points: 0, epoch: 0 });
+  assert.deepEqual(r.data.student.labPoints, { at: 2, ca: 1, su: 0, si: 0 });
+  assert.equal(r.data.student.totalPoints, 3);
+  assert.equal(r.data.student.summary.elementStations, 1);
 
   r = await srv.call('GET', '/api/leaderboard');
   const entry = r.data.leaderboard.find((e: { id: string }) => e.id === student.id);
-  assert.equal(entry.siliconPoints, 7);
-  assert.equal(entry.atomicPoints, atomicAfterOne);
-  assert.equal(entry.totalPoints, 7 + atomicAfterOne);
+  assert.equal(entry.totalPoints, 3);
+  assert.deepEqual(entry.labPoints, { at: 2, ca: 1, su: 0, si: 0 });
+  assert.equal(entry.tasks, undefined, 'لوحة الشرف لا تكشف سجل المهام');
+
+  // المعلمة تفتح مختبر العناصر للجميع
+  r = await srv.call('GET', '/api/session');
+  assert.equal(r.data.session.elementsUnlocked, false);
+  await srv.call('POST', '/api/teacher/session', { elementsUnlocked: true }, token);
+  r = await srv.call('GET', `/api/student/status/${student.id}`);
+  assert.equal(r.data.elementsUnlocked, true);
 
   // التصفير يرفع epoch ويرفض النتائج القديمة
   r = await srv.call('POST', '/api/teacher/reset-scores', undefined, token);
@@ -170,13 +179,13 @@ test('دورة الطالب الكاملة: تسجيل، اعتماد، نقاط
   const backups = fs.readdirSync(path.join(srv.dataDir, 'backups'));
   assert.ok(backups.some(f => f.includes('before-reset')), 'نسخة احتياطية قبل التصفير');
   assert.ok(backups.some(f => f.includes('daily')), 'نسخة يومية');
-  r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, gameId: 'cipher', score: 3, epoch: 0 });
+  r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, taskId: 'at.0.1', points: 1, epoch: 0 });
   assert.equal(r.status, 409);
   assert.equal(r.data.student.scoreEpoch, 1);
   assert.equal(r.data.student.totalPoints, 0);
-  r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, gameId: 'cipher', score: 3, epoch: 1 });
+  r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, taskId: 'at.0.1', points: 1, epoch: 1 });
   assert.equal(r.status, 200);
-  assert.equal(r.data.student.totalPoints, 3);
+  assert.equal(r.data.student.totalPoints, 1);
 
   // المعلمة تعيد تعيين الرقم السري
   r = await srv.call('POST', '/api/teacher/reset-pin', { studentId: student.id }, token);
@@ -248,28 +257,31 @@ test('انتهاء صلاحية رمز المعلمة', async () => {
   srv.stop();
 });
 
-test('ترحيل بيانات النسخة القديمة دون فقدان', async () => {
+test('ترحيل بيانات النسخة القديمة: تُحفظ ولا تُحتسب', async () => {
   const seed = {
     students: {
       'SQR-Si-1111': {
         id: 'SQR-Si-1111', fullName: 'طالب قديم جداً', chemicalId: 'OLD-1', createdAt: 1, status: 'approved',
         falconTitle: 't', affiliation: 'a',
-        scores: { falcon: 5, cipher: 2, flasks: 0, furnace: 0, detective: 0, rescue: 0, quiz_dalton: 1, bogus_task: 50 },
-        completedGames: ['falcon', 'cipher', 'quiz_dalton'], totalPoints: 58, lastActive: 1,
+        scores: { falcon: 5, cipher: 2 }, completedGames: ['falcon', 'cipher'], atomicTasks: ['quiz_dalton'], totalPoints: 8, lastActive: 1,
       },
     },
     session: { isOpen: true, announcement: 'إعلان قديم', lessonName: 'l', teacherName: 'n', organization: 'o' },
   };
   const srv = await startServer({ TEACHER_CODE: CODE }, seed);
-  const r = await srv.call('GET', '/api/leaderboard');
+  let r = await srv.call('GET', '/api/leaderboard');
   const s = r.data.leaderboard[0];
-  assert.equal(s.siliconPoints, 7);
-  assert.ok(s.atomicPoints >= 1, 'مهمة الذرة القديمة تُرحَّل');
-  assert.equal(s.totalPoints, s.siliconPoints + s.atomicPoints, 'المهام المجهولة لا تُحتسب');
+  assert.equal(s.totalPoints, 0, 'نقاط المحتوى القديم لا تُحتسب في المحتوى الجديد');
+  assert.equal(s.legacy, undefined, 'لا تُكشف للعامة');
   // سجل قديم بلا مفتاح يبقى قادراً على الإرسال
-  const sc = await srv.call('POST', '/api/student/score', { studentId: 'SQR-Si-1111', gameId: 'rescue', score: 3, epoch: 0 });
-  assert.equal(sc.status, 200);
-  const session = await srv.call('GET', '/api/session');
-  assert.equal(session.data.session.announcement, 'إعلان قديم');
+  r = await srv.call('POST', '/api/student/score', { studentId: 'SQR-Si-1111', taskId: 'at.0.0', points: 1, epoch: 0 });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.student.totalPoints, 1);
+  r = await srv.call('GET', '/api/session');
+  assert.equal(r.data.session.announcement, 'إعلان قديم');
+  assert.equal(r.data.session.elementsUnlocked, false);
   srv.stop();
+  // النقاط القديمة ما زالت في الملف
+  const stored = JSON.parse(fs.readFileSync(path.join(srv.dataDir, 'lab-store.json'), 'utf-8'));
+  assert.deepEqual(stored.students['SQR-Si-1111'].legacy.scores, { falcon: 5, cipher: 2 });
 });

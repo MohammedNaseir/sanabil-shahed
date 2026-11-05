@@ -2,37 +2,41 @@
  * حفظ هوية الطالب وتقدّمه على الجهاز.
  * التقدّم مخزّن لكل هوية على حدة (أو guest للزائر) حتى لا يختلط طالبان على جهاز واحد.
  */
-import type { DeductionRecord, Student } from '../types';
+import type { Student } from '../types';
 import { readJSON, safeGet, safeRemove, safeSet, writeJSON } from './storage';
-import { isAtomicTaskId, isSiliconGameId } from '../data/atomicTasks';
+import { TASK_POINTS, isTaskId } from '../content/tasks';
 
 const STUDENT_KEY = 'shhd_student_session';
 const STUDENT_SECRET_KEY = 'shhd_student_key';
-const PROGRESS_PREFIX = 'shhd_progress_v1:';
-const LEGACY_MIGRATED_KEY = 'shhd_legacy_progress_migrated';
+// النسخة 2: مختبر v5 (مهام بمعرّفات ثابتة). تقدّم النسخة السابقة لا يُنقل لأن المحتوى تغيّر.
+const PROGRESS_PREFIX = 'shhd_progress_v2:';
 
 export const GUEST_SCOPE = 'guest';
 
-export interface Progress {
-  siliconScores: Record<string, number>;
-  completedGames: string[];
-  solvedTasks: string[];
-  deductions: DeductionRecord[];
-  /** رقم آخر تصفير معروف من المعلمة. */
-  epoch: number;
+export interface NotebookPage {
+  /** توقعاتي */
+  p: string;
+  /** ملاحظاتي */
+  o: string;
+  /** استنتاجاتي */
+  c: string;
 }
 
-export const DEFAULT_DEDUCTIONS: DeductionRecord[] = [
-  {
-    id: 'init_1',
-    title: 'المنهج العلمي في الكيمياء',
-    text: 'تبدأ المعرفة العلمية بالملاحظة وتدوين البيانات، وتستمر عبر صياغة القوانين والفرضيات حتى تصبح نظريات راسخة.',
-    date: 'اليوم الأول',
-  },
-];
+export interface Progress {
+  /** نقاط كل مهمة (وجود المفتاح = حاول الطالب). */
+  tasks: Record<string, number>;
+  /** دفتر الباحث لكل مختبر (at / ca / su / si). */
+  notebook: Record<string, NotebookPage>;
+  /** استنتاجات التجارب لكل مختبر: الوسم ← الخلاصة. */
+  conclusions: Record<string, Record<string, string>>;
+  /** رقم آخر تصفير معروف من المعلمة. */
+  epoch: number;
+  /** رأى الطالب شاشة «فُتح مختبر العناصر». */
+  unlockSeen?: boolean;
+}
 
 export function emptyProgress(): Progress {
-  return { siliconScores: {}, completedGames: [], solvedTasks: [], deductions: [...DEFAULT_DEDUCTIONS], epoch: 0 };
+  return { tasks: {}, notebook: {}, conclusions: {}, epoch: 0 };
 }
 
 // ---------- الهوية ----------
@@ -66,8 +70,6 @@ export function createLocalStudent(fullName: string): Student {
     status: 'pending',
     falconTitle: 'صقر كيميائي - باحث مختبر',
     affiliation: 'صقور أ. شهد في منصة سنابل',
-    scores: {},
-    completedGames: [],
     totalPoints: 0,
     lastActive: Date.now(),
     isLocal: true,
@@ -76,27 +78,29 @@ export function createLocalStudent(fullName: string): Student {
 
 // ---------- التقدّم ----------
 
-function sanitize(p: Partial<Progress> | null | undefined): Progress {
-  const base = emptyProgress();
-  if (!p) return base;
-  const scores: Record<string, number> = {};
-  for (const [k, v] of Object.entries(p.siliconScores || {})) {
+export function cleanTasks(raw: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const [id, v] of Object.entries(raw as Record<string, unknown>)) {
     const n = Number(v);
-    if (isSiliconGameId(k) && Number.isFinite(n) && n > 0) scores[k] = Math.floor(n);
+    if (isTaskId(id) && Number.isFinite(n)) out[id] = Math.max(0, Math.min(TASK_POINTS[id], Math.floor(n)));
   }
+  return out;
+}
+
+function sanitize(p: Partial<Progress> | null | undefined): Progress {
+  if (!p) return emptyProgress();
   return {
-    siliconScores: scores,
-    completedGames: Array.from(new Set((p.completedGames || []).filter(isSiliconGameId))),
-    solvedTasks: Array.from(new Set((p.solvedTasks || []).filter(t => typeof t === 'string'))),
-    deductions: Array.isArray(p.deductions) ? p.deductions : base.deductions,
+    tasks: cleanTasks(p.tasks),
+    notebook: p.notebook && typeof p.notebook === 'object' ? p.notebook : {},
+    conclusions: p.conclusions && typeof p.conclusions === 'object' ? p.conclusions : {},
     epoch: Number(p.epoch) || 0,
+    unlockSeen: Boolean(p.unlockSeen),
   };
 }
 
 export function loadProgress(scope: string): Progress {
-  const stored = readJSON<Partial<Progress> | null>(PROGRESS_PREFIX + scope, null);
-  if (stored) return sanitize(stored);
-  return migrateLegacy(scope);
+  return sanitize(readJSON<Partial<Progress> | null>(PROGRESS_PREFIX + scope, null));
 }
 
 export function saveProgress(scope: string, p: Progress) {
@@ -107,57 +111,33 @@ export function removeProgress(scope: string) {
   safeRemove(PROGRESS_PREFIX + scope);
 }
 
-/**
- * يحمّل التقدّم من مفاتيح النسخة القديمة (المشتركة على مستوى الجهاز) مرة واحدة فقط،
- * ولا يحذف المفاتيح القديمة.
- */
-function migrateLegacy(scope: string): Progress {
-  if (safeGet(LEGACY_MIGRATED_KEY)) return emptyProgress();
-  const legacy = sanitize({
-    siliconScores: readJSON<Record<string, number>>('shhd_silicon_scores', {}),
-    completedGames: readJSON<string[]>('shhd_completed_silicon_games', []),
-    solvedTasks: readJSON<string[]>('atomic_solved_tasks', []),
-    deductions: readJSON<DeductionRecord[] | undefined>('atomic_student_deductions', undefined),
-  });
-  safeSet(LEGACY_MIGRATED_KEY, String(Date.now()));
-  saveProgress(scope, legacy);
-  return legacy;
-}
+const longer = (a = '', b = '') => (b.length > a.length ? b : a);
 
-/** يدمج تقدّماً في آخر (أعلى نتيجة لكل لعبة واتحاد المهام). */
+/** يدمج تقدّماً في آخر: أول محاولة لكل مهمة تبقى كما هي، والدفتر يأخذ الأطول. */
 export function mergeProgress(into: Progress, from: Progress): Progress {
-  const siliconScores = { ...into.siliconScores };
-  for (const [k, v] of Object.entries(from.siliconScores)) siliconScores[k] = Math.max(siliconScores[k] || 0, v);
-  const seenDeductions = new Set(into.deductions.map(d => d.id));
-  return {
-    siliconScores,
-    completedGames: Array.from(new Set([...into.completedGames, ...from.completedGames])),
-    solvedTasks: Array.from(new Set([...into.solvedTasks, ...from.solvedTasks])),
-    deductions: [...into.deductions, ...from.deductions.filter(d => !seenDeductions.has(d.id))],
-    epoch: Math.max(into.epoch, from.epoch),
-  };
+  const tasks = { ...from.tasks, ...into.tasks };
+  const notebook = { ...into.notebook };
+  for (const [lab, page] of Object.entries(from.notebook)) {
+    const cur = notebook[lab] || { p: '', o: '', c: '' };
+    notebook[lab] = { p: longer(cur.p, page.p), o: longer(cur.o, page.o), c: longer(cur.c, page.c) };
+  }
+  const conclusions = { ...into.conclusions };
+  for (const [lab, m] of Object.entries(from.conclusions)) conclusions[lab] = { ...m, ...(conclusions[lab] || {}) };
+  return { tasks, notebook, conclusions, epoch: Math.max(into.epoch, from.epoch), unlockSeen: into.unlockSeen || from.unlockSeen };
 }
 
 /**
  * يحدّث التقدّم المحلي بما يعرفه الخادم.
- * إذا صفّرت المعلمة النقاط (epoch أكبر) تُمسح النقاط المحلية القديمة أولاً.
+ * إذا صفّرت المعلمة النقاط (epoch أكبر) تُمسح المهام المحلية القديمة أولاً.
  */
 export function applyServerStudent(p: Progress, s: Student): { progress: Progress; wasReset: boolean } {
   const serverEpoch = Number(s.scoreEpoch) || 0;
   let base = p;
   let wasReset = false;
   if (serverEpoch > p.epoch) {
-    wasReset = p.completedGames.length > 0 || p.solvedTasks.length > 0;
-    base = { ...p, siliconScores: {}, completedGames: [], solvedTasks: [], epoch: serverEpoch };
+    wasReset = Object.keys(p.tasks).length > 0;
+    base = { ...p, tasks: {}, epoch: serverEpoch, unlockSeen: false };
   }
-  const serverScores: Record<string, number> = {};
-  for (const [k, v] of Object.entries(s.scores || {})) if (isSiliconGameId(k) && v > 0) serverScores[k] = v;
-  const merged = mergeProgress(base, {
-    siliconScores: serverScores,
-    completedGames: s.completedGames || [],
-    solvedTasks: (s.atomicTasks || []).filter(isAtomicTaskId),
-    deductions: [],
-    epoch: serverEpoch,
-  });
-  return { progress: merged, wasReset };
+  // المحلي أولاً: نتيجة أول محاولة على هذا الجهاز لا تتغير، ونضيف ما سجّله الخادم من أجهزة أخرى
+  return { progress: { ...base, tasks: { ...cleanTasks(s.tasks), ...base.tasks } }, wasReset };
 }

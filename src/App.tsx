@@ -1,15 +1,14 @@
 /**
- * مختبر الأسئلة | صقور أ. شهد في منصة سنابل
- * تطبيق تعليمي تفاعلي متكامل مبني وفق منهاج الكيمياء للصف العاشر - دولة فلسطين
- * المختبر الأساسي: درس عنصر السيليكون ومركباته (المحطات الست)
- * المختبر المرافق: بنية الذرة والنماذج الذرية (الوجهات الست)
+ * مختبر أ. شهد | صقور الكيمياء — منصة سنابل التعليمية
+ * مراجعة فصل الذرة والعناصر (الكيمياء، الصف العاشر) بالألعاب والتجارب:
+ *   المرحلة الأولى: مختبر الذرة (6 بوابات)
+ *   المرحلة الثانية: مختبر العناصر — الكالسيوم والكبريت والسيليكون (7 محطات لكل عنصر)
+ * المحتوى من lab_shahd_v5.html (src/content)، والتسجيل والنقاط ولوحة المعلمة من المنصة.
  */
 
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, FlaskConical, WifiOff } from 'lucide-react';
-import confetti from './utils/confetti';
+import { WifiOff } from 'lucide-react';
 
-// المكوّنات الأساسية التي تظهر فوراً
 import { Navbar, MobileTabBar } from './components/Navbar';
 import { ChemicalIdCard } from './components/ChemicalIdCard';
 import { StudentRegisterModal } from './components/StudentRegisterModal';
@@ -19,61 +18,45 @@ import { LabSelectionScreen } from './components/home/LabSelectionScreen';
 import { LazyBoundary, LoadingPanel } from './components/LazyBoundary';
 import { NoticeToast, type Notice } from './components/NoticeToast';
 
-import { Student, LabSession, DeductionRecord } from './types';
+import { Student, LabSession } from './types';
 import { sounds } from './utils/audio';
-import { DraftContext, clearAllDrafts, clearDraft } from './utils/draft';
-import { ATOMIC_DESTINATIONS, type AtomicDestination, type Route, HOME_ROUTE, formatHash, parseHash, sameRoute } from './utils/routing';
+import confetti from './utils/confetti';
+import { type Route, type ElementId, HOME_ROUTE, formatHash, parseHash, sameRoute } from './utils/routing';
 import { usePolling } from './utils/usePolling';
-import { SILICON_MAX_SCORE, isAtomicTaskId, isSiliconGameId, sumAtomicPoints } from './data/atomicTasks';
 import {
-  GUEST_SCOPE, type Progress, applyServerStudent, emptyProgress, loadProgress, loadStudent, loadStudentKey,
+  GUEST_SCOPE, type Progress, type NotebookPage, applyServerStudent, emptyProgress, loadProgress, loadStudent, loadStudentKey,
   mergeProgress, removeProgress, saveProgress, saveStudent, saveStudentKey,
 } from './utils/studentStore';
-import { type SyncState, clearQueue, enqueueAtomic, enqueueSilicon, flushQueue, loadQueue } from './utils/scoreQueue';
+import { type SyncState, clearQueue, enqueueTask, flushQueue, loadQueue } from './utils/scoreQueue';
+import { TASK_POINTS, isTaskId, labTotals, atomFinalDone, ATOM_TASK_COUNT, ELEMENT_STATION_COUNT, elementStationsDone, type LabId } from './content/tasks';
+import { LabContext, type LabRuntime, type NoteKind } from './engine/shared';
 
-// تحميل كسول: كل لعبة/وجهة/نافذة كبيرة تُحمَّل فقط عند فتحها
-const SiliconLabHub = lazy(() => import('./components/SiliconLabHub').then(m => ({ default: m.SiliconLabHub })));
-const GameFalcon = lazy(() => import('./components/games/GameFalcon').then(m => ({ default: m.GameFalcon })));
-const GameCipher = lazy(() => import('./components/games/GameCipher').then(m => ({ default: m.GameCipher })));
-const GameFlasks = lazy(() => import('./components/games/GameFlasks').then(m => ({ default: m.GameFlasks })));
-const GameFurnace = lazy(() => import('./components/games/GameFurnace').then(m => ({ default: m.GameFurnace })));
-const GameDetective = lazy(() => import('./components/games/GameDetective').then(m => ({ default: m.GameDetective })));
-const GameRescue = lazy(() => import('./components/games/GameRescue').then(m => ({ default: m.GameRescue })));
-const DualLabGateway = lazy(() => import('./components/atomic/DualLabGateway').then(m => ({ default: m.DualLabGateway })));
-const AtomicLabHub = lazy(() => import('./components/atomic/AtomicLabHub').then(m => ({ default: m.AtomicLabHub })));
-const TimeTravelStation = lazy(() => import('./components/atomic/destinations/TimeTravelStation').then(m => ({ default: m.TimeTravelStation })));
-const InferConcludeLab = lazy(() => import('./components/atomic/destinations/InferConcludeLab').then(m => ({ default: m.InferConcludeLab })));
-const ExplainLab = lazy(() => import('./components/atomic/destinations/ExplainLab').then(m => ({ default: m.ExplainLab })));
-const ErrorDetectiveLab = lazy(() => import('./components/atomic/destinations/ErrorDetectiveLab').then(m => ({ default: m.ErrorDetectiveLab })));
-const WhatIfLab = lazy(() => import('./components/atomic/destinations/WhatIfLab').then(m => ({ default: m.WhatIfLab })));
-const FinalChallengeLab = lazy(() => import('./components/atomic/destinations/FinalChallengeLab').then(m => ({ default: m.FinalChallengeLab })));
+// تحميل كسول: كل مختبر ونافذة كبيرة يُحمَّل عند فتحه فقط
+const AtomHub = lazy(() => import('./labs/AtomHub').then(m => ({ default: m.AtomHub })));
+const AtomGatePage = lazy(() => import('./labs/AtomGate').then(m => ({ default: m.AtomGatePage })));
+const ElementsHub = lazy(() => import('./labs/Elements').then(m => ({ default: m.ElementsHub })));
+const ElementLabPage = lazy(() => import('./labs/Elements').then(m => ({ default: m.ElementLabPage })));
+const Finale = lazy(() => import('./labs/Elements').then(m => ({ default: m.Finale })));
+const UnlockFx = lazy(() => import('./labs/Elements').then(m => ({ default: m.UnlockFx })));
 const TeacherDashboard = lazy(() => import('./components/TeacherDashboard').then(m => ({ default: m.TeacherDashboard })));
 const LeaderboardModal = lazy(() => import('./components/LeaderboardModal').then(m => ({ default: m.LeaderboardModal })));
 const ShareLabModal = lazy(() => import('./components/ShareLabModal').then(m => ({ default: m.ShareLabModal })));
-const ChemistryCertificateModal = lazy(() => import('./components/ChemistryCertificateModal').then(m => ({ default: m.ChemistryCertificateModal })));
-const AtomicCertificateModal = lazy(() => import('./components/atomic/AtomicCertificateModal').then(m => ({ default: m.AtomicCertificateModal })));
-const ResearcherNotebook = lazy(() => import('./components/atomic/ResearcherNotebook').then(m => ({ default: m.ResearcherNotebook })));
-
-const SILICON_GAMES = { falcon: GameFalcon, cipher: GameCipher, flasks: GameFlasks, furnace: GameFurnace, detective: GameDetective, rescue: GameRescue } as const;
+const CertificateModal = lazy(() => import('./components/ChemistryCertificateModal').then(m => ({ default: m.ChemistryCertificateModal })));
+const NotebookModal = lazy(() => import('./components/Notebook').then(m => ({ default: m.NotebookModal })));
 
 const DEFAULT_SESSION: LabSession = {
   isOpen: true,
-  announcement: 'مرحباً بكم يا صقور الكيمياء في مختبر أ. شهد — انطلقوا في محطات السيليكون الست لاقتناص الإجابات ونيل وسام التميز!',
-  lessonName: 'السيليكون ومركباته — الكيمياء الصف العاشر',
+  announcement: 'مرحبًا بكم يا صقور الكيمياء! اليوم مراجعة على شكل ألعاب وتحديات: نراجع فصل الذرة والعناصر ونجمع النقاط.',
+  lessonName: 'مراجعة فصل الذرة والعناصر — الكيمياء الصف العاشر',
   teacherName: 'أ. شهد',
   organization: 'منصة سنابل التعليمية',
+  elementsUnlocked: false,
 };
 
 const STATUS_POLL_MS = 7000;
 const SESSION_POLL_MS = 30000;
 
-function scrollTop() {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function celebrate() {
-  confetti({ disableForReducedMotion: true, particleCount: 90, spread: 75, origin: { y: 0.6 } });
-}
+const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
 export default function App() {
   // =================== التنقّل عبر الرابط ===================
@@ -101,15 +84,15 @@ export default function App() {
     scrollTop();
   }, []);
 
-  const go = {
+  const go = useMemo(() => ({
     reception: () => navigate(HOME_ROUTE),
-    labs: () => navigate({ view: 'lab_selection', station: null, destination: null }),
-    silicon: (opts?: { replace?: boolean }) => navigate({ view: 'silicon_hub', station: null, destination: null }, opts),
-    game: (station: string) => navigate({ view: 'silicon_game', station, destination: null }),
-    atomic: (opts?: { replace?: boolean }) => navigate({ view: 'atomic_hub', station: null, destination: null }, opts),
-    destination: (d: AtomicDestination) => navigate({ view: 'destination', station: null, destination: d }),
-    gateway: () => navigate({ view: 'gateway', station: null, destination: null }),
-  };
+    labs: () => navigate({ view: 'lab_selection', gate: null, lab: null }),
+    atom: () => navigate({ view: 'atom_hub', gate: null, lab: null }),
+    gate: (g: number) => navigate({ view: 'atom_gate', gate: g, lab: null }),
+    elements: () => navigate({ view: 'elements_hub', gate: null, lab: null }),
+    lab: (lab: ElementId) => navigate({ view: 'element_lab', gate: null, lab }),
+    finale: () => navigate({ view: 'finale', gate: null, lab: null }),
+  }), [navigate]);
 
   const currentView = route.view;
 
@@ -135,7 +118,7 @@ export default function App() {
 
   const scope = currentStudent?.id ?? GUEST_SCOPE;
 
-  // نحفظ التقدّم مع نطاقه في حالة واحدة حتى لا يُكتب تقدّم طالب في سجل طالب آخر عند التبديل
+  // التقدّم مع نطاقه في حالة واحدة حتى لا يُكتب تقدّم طالب في سجل طالب آخر عند التبديل
   const [progressState, setProgressState] = useState<{ scope: string; progress: Progress }>(() => ({ scope, progress: loadProgress(scope) }));
   const progressStateRef = useRef(progressState);
   progressStateRef.current = progressState;
@@ -153,9 +136,7 @@ export default function App() {
     setProgressState(prev => ({ scope: prev.scope, progress: fn(prev.progress) }));
   }, []);
 
-  const siliconPoints = Object.values(progress.siliconScores).reduce((a, b) => a + b, 0);
-  const atomicPoints = sumAtomicPoints(progress.solvedTasks);
-  const totalPoints = siliconPoints + atomicPoints;
+  const totals = labTotals(progress.tasks);
 
   // =================== الجلسة والإشعارات ===================
   const [session, setSession] = useState<LabSession | null>(null);
@@ -200,7 +181,7 @@ export default function App() {
     if (prev.status !== server.status) {
       if (server.status === 'approved') {
         sounds.victory();
-        celebrate();
+        confetti({ particleCount: 80, spread: 75 });
         setNotice({ tone: 'success', text: `🎉 اعتمدتك المعلمة يا ${server.fullName.split(' ')[0]}! نقاطك تُحتسب الآن في لوحة الشرف.` });
       } else if (server.status === 'rejected') {
         setNotice({ tone: 'error', text: `لم تعتمد المعلمة طلبك: ${server.rejectionReason || 'يرجى مراجعة المعلمة'}.` });
@@ -210,10 +191,7 @@ export default function App() {
     const current = progressStateRef.current;
     const reset = current.scope === server.id && applyServerStudent(current.progress, server).wasReset;
     setProgressState(ps => (ps.scope !== server.id ? ps : { scope: ps.scope, progress: applyServerStudent(ps.progress, server).progress }));
-    if (reset) {
-      clearAllDrafts(server.id);
-      setNotice({ tone: 'info', text: 'صفّرت المعلمة النقاط لبدء جولة جديدة. بالتوفيق!' });
-    }
+    if (reset) setNotice({ tone: 'info', text: 'صفّرت المعلمة النقاط لبدء جولة جديدة. بالتوفيق!' });
   }, [setCurrentStudent]);
 
   const syncNow = useCallback(async () => {
@@ -253,7 +231,7 @@ export default function App() {
       setServerReachable(true);
       applyServer(data.student);
       if (typeof data.announcement === 'string') {
-        setSession(prev => (prev ? { ...prev, isOpen: data.sessionIsOpen, announcement: data.announcement } : prev));
+        setSession(prev => ({ ...(prev || DEFAULT_SESSION), isOpen: data.sessionIsOpen, announcement: data.announcement, elementsUnlocked: Boolean(data.elementsUnlocked) }));
       }
       if (data.student.status === 'approved' && loadQueue(s.id).length > 0) await syncNow();
       else if (loadQueue(s.id).length > 0) setSyncState('waiting_approval');
@@ -268,45 +246,51 @@ export default function App() {
 
   usePolling(pollStatus, STATUS_POLL_MS, Boolean(currentStudent && !currentStudent.isLocal));
 
-  // =================== النتائج ===================
+  // =================== سياق المختبر: النقاط والدفتر ===================
 
-  const handleFinishSiliconGame = (gameId: string, rawScore: number) => {
-    if (!isSiliconGameId(gameId)) return;
-    const score = Math.max(0, Math.min(SILICON_MAX_SCORE, Math.floor(Number(rawScore) || 0)));
-    const best = Math.max(progress.siliconScores[gameId] || 0, score);
-    updateProgress(p => ({
-      ...p,
-      siliconScores: { ...p.siliconScores, [gameId]: Math.max(p.siliconScores[gameId] || 0, score) },
-      completedGames: p.completedGames.includes(gameId) ? p.completedGames : [...p.completedGames, gameId],
-    }));
-    clearDraft(scope, gameId);
+  const tasksRef = useRef(progress.tasks);
+  tasksRef.current = progress.tasks;
 
+  const award = useCallback((taskId: string, points: number) => {
+    if (!isTaskId(taskId) || tasksRef.current[taskId] !== undefined) return 0;
+    const pts = Math.max(0, Math.min(TASK_POINTS[taskId], Math.floor(points)));
+    tasksRef.current = { ...tasksRef.current, [taskId]: pts };
+    updateProgress(p => (p.tasks[taskId] !== undefined ? p : { ...p, tasks: { ...p.tasks, [taskId]: pts } }));
     const s = studentRef.current;
     if (s && !s.isLocal) {
-      enqueueSilicon(s.id, gameId, best, progress.epoch);
+      enqueueTask(s.id, taskId, pts, progressStateRef.current.progress.epoch);
       void syncNow();
     }
-    go.silicon({ replace: true });
-  };
+    return pts;
+  }, [updateProgress, syncNow]);
 
-  const handleAwardAtomicPoints = (_points: number, taskId: string) => {
-    if (progress.solvedTasks.includes(taskId)) return;
-    updateProgress(p => (p.solvedTasks.includes(taskId) ? p : { ...p, solvedTasks: [...p.solvedTasks, taskId] }));
-    const s = studentRef.current;
-    if (s && !s.isLocal && isAtomicTaskId(taskId)) {
-      enqueueAtomic(s.id, taskId, progress.epoch);
-      void syncNow();
-    }
-  };
+  const note = useCallback((lab: string, kind: NoteKind, line: string) => {
+    updateProgress(p => {
+      const page = p.notebook[lab] || { p: '', o: '', c: '' };
+      if (page[kind].includes(line)) return p;
+      return { ...p, notebook: { ...p.notebook, [lab]: { ...page, [kind]: `${page[kind]}\n• ${line}`.trim() } } };
+    });
+  }, [updateProgress]);
 
-  const handleRecordDeduction = (title: string, text: string) => {
-    const newDeduction: DeductionRecord = {
-      id: `ded_${Date.now()}`,
-      title,
-      text,
-      date: new Date().toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' }),
-    };
-    updateProgress(p => ({ ...p, deductions: [newDeduction, ...p.deductions] }));
+  const conclude = useCallback((lab: string, tag: string, sum: string) => {
+    updateProgress(p => ({ ...p, conclusions: { ...p.conclusions, [lab]: { ...(p.conclusions[lab] || {}), [tag]: sum } } }));
+  }, [updateProgress]);
+
+  const labRuntime: LabRuntime = useMemo(() => ({ tasks: progress.tasks, award, note, conclude }), [progress.tasks, award, note, conclude]);
+
+  // =================== فتح مختبر العناصر ===================
+  const atomDone = atomFinalDone(progress.tasks);
+  const elementsUnlocked = atomDone || Boolean(session?.elementsUnlocked);
+  const [showUnlock, setShowUnlock] = useState(false);
+  useEffect(() => {
+    if (!atomDone || progress.unlockSeen || showUnlock) return;
+    const t = setTimeout(() => setShowUnlock(true), 1500);
+    return () => clearTimeout(t);
+  }, [atomDone, progress.unlockSeen, showUnlock]);
+  const closeUnlock = () => {
+    updateProgress(p => ({ ...p, unlockSeen: true }));
+    setShowUnlock(false);
+    go.elements();
   };
 
   // =================== التسجيل وتبديل الطالب ===================
@@ -315,8 +299,7 @@ export default function App() {
   const [isIdCardOpen, setIsIdCardOpen] = useState(false);
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   const [isTeacherOpen, setIsTeacherOpen] = useState(false);
-  const [isSiliconCertOpen, setIsSiliconCertOpen] = useState(false);
-  const [isAtomicCertOpen, setIsAtomicCertOpen] = useState(false);
+  const [isCertOpen, setIsCertOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isNotebookOpen, setIsNotebookOpen] = useState(false);
 
@@ -348,8 +331,7 @@ export default function App() {
 
     // نضع التقدّم المنقول في الطابور؛ لن يقبله الخادم إلا بعد اعتماد المعلمة
     if (carryOver) {
-      for (const [g, v] of Object.entries(nextProgress.siliconScores)) enqueueSilicon(student.id, g, v, nextProgress.epoch);
-      for (const t of nextProgress.solvedTasks) if (isAtomicTaskId(t)) enqueueAtomic(student.id, t, nextProgress.epoch);
+      for (const [t, pts] of Object.entries(nextProgress.tasks)) enqueueTask(student.id, t, pts, nextProgress.epoch);
     }
     setSyncState(student.status === 'approved' ? 'pending' : 'waiting_approval');
     if (student.status === 'approved') {
@@ -357,11 +339,10 @@ export default function App() {
       setIsIdCardOpen(true);
       void syncNow();
     }
-    // إن كان الطلب قيد الانتظار تبقى النافذة مفتوحة وتعرض حالة الانتظار
   };
 
   const handleSwitchStudent = () => {
-    if (!confirm('هل تريد تسجيل الخروج من هذا الجهاز؟ سيبقى تقدّمك محفوظاً ويعود عند تسجيل الدخول بالهوية نفسها.')) return;
+    if (!confirm('هل تريد تسجيل الخروج من هذا الجهاز؟ سيبقى تقدّمك محفوظاً ويعود عند الدخول باسمك ورقمك السري.')) return;
     setCurrentStudent(null);
     setStudentKey(null);
     setSyncState('saved');
@@ -378,91 +359,58 @@ export default function App() {
   const [soundOn, setSoundOn] = useState(() => sounds.isEnabled());
   const toggleSound = () => setSoundOn(sounds.setEnabled(!sounds.isEnabled()));
 
-  // =================== إعادة تشغيل لعبة ===================
-  const [gameInstance, setGameInstance] = useState(0);
-  const draftContext = useMemo(() => ({
-    scope,
-    restart: (gameId: string) => {
-      clearDraft(scope, gameId);
-      setGameInstance(n => n + 1);
-    },
-  }), [scope]);
-
   // =================== قيم العرض ===================
 
-  const completedSections = [
-    progress.solvedTasks.some(t => t.startsWith('quiz_') || t.includes('timeline') || t.startsWith('match_')) ? 'timeline' : '',
-    progress.solvedTasks.some(t => t.startsWith('deduction_') || t.includes('method')) ? 'infer' : '',
-    progress.solvedTasks.some(t => t.startsWith('explain_')) ? 'explain' : '',
-    progress.solvedTasks.some(t => t.startsWith('error_')) ? 'errors' : '',
-    progress.solvedTasks.some(t => t.startsWith('whatif_')) ? 'whatif' : '',
-    progress.solvedTasks.some(t => t.startsWith('final_')) ? 'final_challenge' : '',
-  ].filter(Boolean);
-
   const displayStudent: Student | null = currentStudent
-    ? { ...currentStudent, scores: progress.siliconScores, completedGames: progress.completedGames, siliconPoints, atomicPoints, totalPoints }
+    ? { ...currentStudent, totalPoints: totals.total, labPoints: { at: totals.at, ca: totals.ca, su: totals.su, si: totals.si } }
     : null;
 
-  // شهادة السيليكون تُحسب من نقاط السيليكون فقط (من أصل 52)
-  const certificateStudent: Student = {
-    ...(displayStudent || {
-      id: 'GUEST-FALCON',
-      fullName: 'صقر الكيمياء المتألق',
-      chemicalId: 'Si-14-SNBL',
-      createdAt: Date.now(),
-      status: 'approved' as const,
-      falconTitle: 'صقر كيميائي - باحث مختبر',
-      affiliation: 'صقور أ. شهد في منصة سنابل',
-      lastActive: Date.now(),
-    }),
-    scores: progress.siliconScores,
-    completedGames: progress.completedGames,
-    totalPoints: siliconPoints,
+  const atomAttempted = Object.keys(progress.tasks).filter(t => t.startsWith('at.')).length;
+  const elDone = elementStationsDone(progress.tasks);
+
+  const notebookLab: LabId = route.view === 'element_lab' && route.lab ? route.lab : 'at';
+
+  const navProps = {
+    currentStudent: displayStudent,
+    session,
+    currentView,
+    syncState: currentStudent ? syncState : null,
+    soundOn,
+    onToggleSound: toggleSound,
+    onNavigateHome: () => { sounds.click(); go.reception(); },
+    onNavigateSelection: () => { sounds.click(); go.labs(); },
+    onNavigateAtom: () => { sounds.click(); go.atom(); },
+    onNavigateElements: () => { sounds.click(); go.elements(); },
+    onOpenNotebook: () => setIsNotebookOpen(true),
+    onOpenIdCard: openIdOrRegister,
+    onOpenRegister: () => setIsRegisterOpen(true),
+    onOpenLeaderboard: () => setIsLeaderboardOpen(true),
+    onOpenTeacher: () => setIsTeacherOpen(true),
+    onOpenShare: () => setIsShareOpen(true),
   };
 
-  const backToSiliconHub = () => {
-    sounds.click();
-    go.silicon();
-  };
-  const backToAtomicHub = () => go.atomic();
-
-  const ActiveGame = route.station && isSiliconGameId(route.station) ? SILICON_GAMES[route.station] : null;
-
-  const destinationProps = {
-    onBack: backToAtomicHub,
-    onAwardPoints: handleAwardAtomicPoints,
-    onRecordDeduction: handleRecordDeduction,
-    solvedQuizzes: progress.solvedTasks,
+  const certificateStudent: Student = displayStudent || {
+    id: 'GUEST', fullName: 'صقر الكيمياء المتألق', chemicalId: '—', createdAt: Date.now(), status: 'approved',
+    falconTitle: 'صقر كيميائي - باحث مختبر', affiliation: 'صقور أ. شهد في منصة سنابل', totalPoints: totals.total, lastActive: Date.now(),
   };
 
   return (
-    <DraftContext.Provider value={draftContext}>
+    <LabContext.Provider value={labRuntime}>
     <div className="min-h-[100svh] text-slate-100 flex flex-col selection:bg-amber-400 selection:text-slate-950 relative overflow-x-hidden font-sans">
 
       {currentView === 'reception' && (
-        <ReceptionScreen
-          onEnterLab={() => {
-            sounds.click();
-            go.labs();
-          }}
-        />
+        <ReceptionScreen onEnterLab={() => { sounds.click(); go.labs(); }} />
       )}
 
       {currentView === 'lab_selection' && (
         <LabSelectionScreen
-          onSelectSiliconLab={() => {
-            sounds.click();
-            go.silicon();
-          }}
-          onSelectAtomicLab={() => {
-            sounds.click();
-            go.atomic();
-          }}
-          onBackToReception={() => {
-            sounds.click();
-            go.reception();
-          }}
-          studentPoints={totalPoints}
+          onSelectAtomLab={() => go.atom()}
+          onSelectElementsLab={() => go.elements()}
+          elementsUnlocked={elementsUnlocked}
+          atomProgress={`${atomAttempted} / ${ATOM_TASK_COUNT} نشاطًا · ${totals.at} نقطة`}
+          elementsProgress={`${elDone} / ${ELEMENT_STATION_COUNT} مهمة · ${totals.ca + totals.su + totals.si} نقطة`}
+          onBackToReception={() => { sounds.click(); go.reception(); }}
+          studentPoints={totals.total}
           studentName={currentStudent?.fullName}
           chemicalId={currentStudent?.chemicalId}
         />
@@ -471,43 +419,8 @@ export default function App() {
       {currentView !== 'reception' && currentView !== 'lab_selection' && (
         <>
           <AtelierBackdrop />
-
-          <Navbar
-            currentStudent={displayStudent}
-            session={session}
-            currentView={currentView}
-            syncState={currentStudent ? syncState : null}
-            soundOn={soundOn}
-            onToggleSound={toggleSound}
-            onNavigateHome={() => { sounds.click(); go.reception(); }}
-            onNavigateSelection={() => { sounds.click(); go.labs(); }}
-            onNavigateSiliconHub={() => { sounds.click(); go.silicon(); }}
-            onNavigateAtomicHub={() => { sounds.click(); go.atomic(); }}
-            onOpenNotebook={() => setIsNotebookOpen(true)}
-            onOpenIdCard={openIdOrRegister}
-            onOpenRegister={() => setIsRegisterOpen(true)}
-            onOpenLeaderboard={() => setIsLeaderboardOpen(true)}
-            onOpenTeacher={() => setIsTeacherOpen(true)}
-            onOpenShare={() => setIsShareOpen(true)}
-          />
-          <MobileTabBar
-            currentStudent={displayStudent}
-            session={session}
-            currentView={currentView}
-            syncState={currentStudent ? syncState : null}
-            soundOn={soundOn}
-            onToggleSound={toggleSound}
-            onNavigateHome={() => { sounds.click(); go.reception(); }}
-            onNavigateSelection={() => { sounds.click(); go.labs(); }}
-            onNavigateSiliconHub={() => { sounds.click(); go.silicon(); }}
-            onNavigateAtomicHub={() => { sounds.click(); go.atomic(); }}
-            onOpenNotebook={() => setIsNotebookOpen(true)}
-            onOpenIdCard={openIdOrRegister}
-            onOpenRegister={() => setIsRegisterOpen(true)}
-            onOpenLeaderboard={() => setIsLeaderboardOpen(true)}
-            onOpenTeacher={() => setIsTeacherOpen(true)}
-            onOpenShare={() => setIsShareOpen(true)}
-          />
+          <Navbar {...navProps} />
+          <MobileTabBar {...navProps} />
 
           <main id="main" className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-28 md:py-8 space-y-6">
 
@@ -518,21 +431,17 @@ export default function App() {
                   وضع التدريب دون اتصال: نتائجك محفوظة على هذا الجهاز فقط ولم تصل للمعلمة.
                 </span>
                 {serverReachable && (
-                  <button
-                    type="button"
-                    onClick={() => setIsRegisterOpen(true)}
-                    className="h-8 px-4 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold"
-                  >
+                  <button type="button" onClick={() => setIsRegisterOpen(true)} className="h-8 px-4 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold">
                     الخادم متاح الآن — سجّل لإرسال طلبك
                   </button>
                 )}
               </div>
             )}
 
-            {session?.announcement && (
+            {session?.announcement && (currentView === 'atom_hub' || currentView === 'elements_hub') && (
               <aside className="flex items-start gap-4 border-s-2 border-amber-400 ps-4 py-1 animate-in" aria-label="توجيه المعلمة">
                 <p className="text-[15px] leading-relaxed text-slate-300">
-                  <span className="font-display text-amber-300 ms-0 me-2">توجيه أ. شهد</span>
+                  <span className="font-display text-amber-300 me-2">توجيه أ. شهد</span>
                   {session.announcement}
                 </p>
               </aside>
@@ -540,98 +449,19 @@ export default function App() {
 
             <LazyBoundary>
               <Suspense fallback={<LoadingPanel />}>
-
-                {currentView === 'silicon_hub' && (
-                  <SiliconLabHub
-                    currentStudent={displayStudent}
-                    totalPoints={siliconPoints}
-                    completedGames={progress.completedGames}
-                    scores={progress.siliconScores}
-                    onSelectStation={(stationId) => go.game(stationId)}
-                    onOpenIdCard={openIdOrRegister}
-                    onOpenRegister={() => setIsRegisterOpen(true)}
-                    onOpenCertificate={() => setIsSiliconCertOpen(true)}
-                    onOpenLeaderboard={() => setIsLeaderboardOpen(true)}
-                    onSwitchToAtomicLab={() => go.atomic()}
-                  />
+                {currentView === 'atom_hub' && <AtomHub tasks={progress.tasks} points={totals.at} onOpenGate={g => go.gate(g)} />}
+                {currentView === 'atom_gate' && route.gate != null && (
+                  <AtomGatePage key={route.gate} gateIndex={route.gate} onBack={() => go.atom()} onToast={m => setNotice({ tone: 'info', text: m })} />
                 )}
-
-                {currentView === 'silicon_game' && ActiveGame && route.station && (
-                  <div className="w-full space-y-4">
-                    <nav aria-label="مسار التنقل" className="flex items-center justify-between gap-3">
-                      <button
-                        type="button"
-                        onClick={backToSiliconHub}
-                        className="inline-flex items-center gap-2 h-9 ps-3 pe-4 rounded-full border hairline text-sm text-slate-300 hover:text-amber-300 transition-colors"
-                      >
-                        <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                        <span>المحطات</span>
-                      </button>
-                      <span className="text-[13px] text-slate-500 truncate">
-                        مختبر السيليكون <span className="text-amber-400/60 mx-1">/</span>
-                        <span className="text-slate-300">{currentStudent?.fullName.split(' ')[0] || 'صقر الكيمياء'}</span>
-                      </span>
-                    </nav>
-                    <ActiveGame
-                      key={`${scope}:${route.station}:${gameInstance}`}
-                      onFinish={(score: number) => handleFinishSiliconGame(route.station!, score)}
-                      onExit={() => go.silicon()}
-                    />
-                  </div>
+                {currentView === 'elements_hub' && (
+                  <ElementsHub tasks={progress.tasks} unlocked={elementsUnlocked} onOpenLab={id => go.lab(id)} onBackToAtom={() => go.atom()} onFinale={() => go.finale()} />
                 )}
-
-                {currentView === 'gateway' && (
-                  <DualLabGateway
-                    onEnterSiliconLab={() => go.silicon()}
-                    onEnterAtomicLab={() => go.atomic()}
-                    onOpenNotebook={() => setIsNotebookOpen(true)}
-                    studentPoints={totalPoints}
-                  />
+                {currentView === 'element_lab' && route.lab && (
+                  elementsUnlocked
+                    ? <ElementLabPage key={route.lab} labId={route.lab} conclusions={progress.conclusions[route.lab] || {}} onBack={() => go.elements()} onFinale={() => go.finale()} />
+                    : <ElementsHub tasks={progress.tasks} unlocked={false} onOpenLab={() => {}} onBackToAtom={() => go.atom()} onFinale={() => {}} />
                 )}
-
-                {currentView === 'atomic_hub' && (
-                  <div className="space-y-4">
-                    <nav aria-label="مسار التنقل" className="flex items-center justify-between gap-3">
-                      <button
-                        type="button"
-                        onClick={backToSiliconHub}
-                        className="inline-flex items-center gap-2 h-9 ps-3 pe-4 rounded-full border hairline text-sm text-slate-300 hover:text-amber-300 transition-colors"
-                      >
-                        <FlaskConical className="w-4 h-4 text-amber-400" aria-hidden="true" />
-                        <span>مختبر السيليكون</span>
-                      </button>
-                      <span className="text-[13px] text-cyan-400">بنية الذرة والنماذج الذرية</span>
-                    </nav>
-                    <AtomicLabHub
-                      onSelectDestination={(destId) => {
-                        if ((ATOMIC_DESTINATIONS as readonly string[]).includes(destId)) go.destination(destId as AtomicDestination);
-                      }}
-                      onOpenNotebook={() => setIsNotebookOpen(true)}
-                      onOpenCertificate={() => setIsAtomicCertOpen(true)}
-                      onBackToGateway={() => go.silicon()}
-                      totalPoints={atomicPoints}
-                      completedTasks={completedSections}
-                      studentName={currentStudent?.fullName || 'باحث الكيمياء'}
-                    />
-                  </div>
-                )}
-
-                {currentView === 'destination' && (
-                  <div className="w-full" key={`${scope}:${route.destination}:${gameInstance}`}>
-                    {route.destination === 'timeline' && <TimeTravelStation {...destinationProps} />}
-                    {route.destination === 'infer' && <InferConcludeLab {...destinationProps} />}
-                    {route.destination === 'explain' && <ExplainLab {...destinationProps} />}
-                    {route.destination === 'error_detective' && <ErrorDetectiveLab {...destinationProps} />}
-                    {route.destination === 'whatif' && <WhatIfLab {...destinationProps} />}
-                    {route.destination === 'final_challenge' && (
-                      <FinalChallengeLab
-                        {...destinationProps}
-                        onOpenCertificate={() => setIsAtomicCertOpen(true)}
-                        totalScore={atomicPoints}
-                      />
-                    )}
-                  </div>
-                )}
+                {currentView === 'finale' && <Finale tasks={progress.tasks} onBack={() => go.labs()} onCertificate={() => setIsCertOpen(true)} />}
               </Suspense>
             </LazyBoundary>
           </main>
@@ -641,40 +471,19 @@ export default function App() {
       {/* --- النوافذ المنبثقة (تُحمَّل عند فتحها فقط) --- */}
       <LazyBoundary>
         <Suspense fallback={null}>
-          {isSiliconCertOpen && (
-            <ChemistryCertificateModal student={certificateStudent} onClose={() => setIsSiliconCertOpen(false)} />
-          )}
-
-          {isAtomicCertOpen && (
-            <AtomicCertificateModal
-              isOpen
-              onClose={() => setIsAtomicCertOpen(false)}
-              studentName={currentStudent?.fullName || 'باحث الذرة المتميز'}
-              chemicalId={currentStudent?.chemicalId || 'FALCON-ATOM-2026'}
-              score={atomicPoints}
-            />
-          )}
-
+          {showUnlock && <UnlockFx onDone={closeUnlock} />}
+          {isCertOpen && <CertificateModal student={certificateStudent} onClose={() => setIsCertOpen(false)} />}
           {isNotebookOpen && (
-            <ResearcherNotebook
-              isOpen
-              onClose={() => setIsNotebookOpen(false)}
+            <NotebookModal
+              notebook={progress.notebook}
+              initialLab={notebookLab}
               studentName={currentStudent?.fullName || 'باحث الكيمياء'}
-              totalPoints={totalPoints}
-              completedTasks={progress.completedGames}
-              deductions={progress.deductions}
-              storageScope={scope}
+              onChange={(lab, page: NotebookPage) => updateProgress(p => ({ ...p, notebook: { ...p.notebook, [lab]: page } }))}
+              onClose={() => setIsNotebookOpen(false)}
             />
           )}
-
-          {isLeaderboardOpen && (
-            <LeaderboardModal onClose={() => setIsLeaderboardOpen(false)} currentStudentId={currentStudent?.id} />
-          )}
-
-          {isTeacherOpen && (
-            <TeacherDashboard onClose={() => setIsTeacherOpen(false)} onRefreshData={fetchSessionData} />
-          )}
-
+          {isLeaderboardOpen && <LeaderboardModal onClose={() => setIsLeaderboardOpen(false)} currentStudentId={currentStudent?.id} />}
+          {isTeacherOpen && <TeacherDashboard onClose={() => setIsTeacherOpen(false)} onRefreshData={fetchSessionData} />}
           {isShareOpen && <ShareLabModal onClose={() => setIsShareOpen(false)} />}
         </Suspense>
       </LazyBoundary>
@@ -696,13 +505,13 @@ export default function App() {
           onSwitchStudent={handleSwitchStudent}
           onOpenCertificate={() => {
             setIsIdCardOpen(false);
-            setIsSiliconCertOpen(true);
+            setIsCertOpen(true);
           }}
         />
       )}
 
       <NoticeToast notice={notice} onDismiss={() => setNotice(null)} />
     </div>
-    </DraftContext.Provider>
+    </LabContext.Provider>
   );
 }

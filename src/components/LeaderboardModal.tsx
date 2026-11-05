@@ -9,17 +9,8 @@ interface LeaderboardEntry {
   fullName: string;
   chemicalId?: string;
   falconTitle: string;
-  scores: {
-    falcon: number;
-    cipher: number;
-    flasks: number;
-    furnace: number;
-    detective: number;
-    rescue: number;
-  };
-  completedGamesCount: number;
-  siliconPoints?: number;
-  atomicPoints?: number;
+  labPoints?: { at: number; ca: number; su: number; si: number };
+  summary?: { atomGates: number; elementStations: number };
   totalPoints: number;
   isOnline: boolean;
 }
@@ -140,8 +131,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ currentStude
                           {student.chemicalId || student.id}
                         </span>
                         <span>•</span>
-                        <span>أنجز {student.completedGamesCount} من 6 محطات</span>
-                        <span className="hidden sm:inline">• سيليكون {student.siliconPoints ?? student.totalPoints} • ذرة {student.atomicPoints ?? 0}</span>
+                        <span>الذرة {student.labPoints?.at ?? 0} • العناصر {(student.labPoints?.ca ?? 0) + (student.labPoints?.su ?? 0) + (student.labPoints?.si ?? 0)}</span>
                       </div>
                     </div>
                   </div>

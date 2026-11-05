@@ -17,8 +17,8 @@ interface NavbarProps {
   onToggleSound: () => void;
   onNavigateHome: () => void;
   onNavigateSelection: () => void;
-  onNavigateSiliconHub: () => void;
-  onNavigateAtomicHub: () => void;
+  onNavigateAtom: () => void;
+  onNavigateElements: () => void;
   onOpenNotebook: () => void;
   onOpenIdCard: () => void;
   onOpenRegister: () => void;
@@ -38,9 +38,9 @@ const SYNC_LABELS: Record<SyncState, { text: string; cls: string; Icon: React.FC
 
 function useActive(currentView: string) {
   return {
-    selection: currentView === 'lab_selection' || currentView === 'gateway',
-    silicon: currentView === 'silicon_hub' || currentView === 'silicon_game',
-    atomic: currentView === 'atomic_hub' || currentView === 'destination',
+    selection: currentView === 'lab_selection' || currentView === 'finale',
+    atom: currentView === 'atom_hub' || currentView === 'atom_gate',
+    elements: currentView === 'elements_hub' || currentView === 'element_lab',
   };
 }
 
@@ -182,8 +182,8 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
 
         <nav aria-label="التنقل بين المختبرات" className="hidden md:flex items-stretch gap-4 lg:gap-6 h-full">
           <TopLink active={active.selection} onClick={props.onNavigateSelection}>المختبرات</TopLink>
-          <TopLink active={active.silicon} onClick={props.onNavigateSiliconHub}>مختبر السيليكون</TopLink>
-          <TopLink active={active.atomic} onClick={props.onNavigateAtomicHub}>مختبر الذرة</TopLink>
+          <TopLink active={active.atom} onClick={props.onNavigateAtom}>مختبر الذرة</TopLink>
+          <TopLink active={active.elements} onClick={props.onNavigateElements}>مختبر العناصر</TopLink>
           <span className="hidden lg:contents">
             <TopLink onClick={props.onOpenLeaderboard}>لوحة الشرف</TopLink>
             <TopLink onClick={props.onOpenNotebook}>دفتر الباحث</TopLink>
@@ -236,8 +236,8 @@ export const MobileTabBar: React.FC<NavbarProps> = (props) => {
 
   const tabs = [
     { key: 'labs', label: 'المختبرات', Icon: LayoutGrid, onClick: props.onNavigateSelection, active: active.selection },
-    { key: 'si', label: 'السيليكون', Icon: FlaskConical, onClick: props.onNavigateSiliconHub, active: active.silicon },
-    { key: 'atom', label: 'الذرة', Icon: Atom, onClick: props.onNavigateAtomicHub, active: active.atomic },
+    { key: 'atom', label: 'الذرة', Icon: Atom, onClick: props.onNavigateAtom, active: active.atom },
+    { key: 'el', label: 'العناصر', Icon: FlaskConical, onClick: props.onNavigateElements, active: active.elements },
     { key: 'board', label: 'الشرف', Icon: Trophy, onClick: props.onOpenLeaderboard, active: false },
     {
       key: 'me',

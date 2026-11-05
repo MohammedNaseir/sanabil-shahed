@@ -71,7 +71,7 @@ export const ChemicalIdCard: React.FC<ChemicalIdCardProps> = ({ student, onClose
             </div>
 
             <div className="text-left font-mono text-xs">
-              <span className="text-slate-400 text-[10px] block">الهوية الكيميائية</span>
+              <span className="text-slate-400 text-[10px] block">رقم الطالب</span>
               <span className="text-amber-300 font-extrabold tracking-wider bg-slate-900/90 px-2 py-0.5 rounded border border-amber-500/30 text-sm">
                 {student.chemicalId || student.id}
               </span>
@@ -147,29 +147,15 @@ export const ChemicalIdCard: React.FC<ChemicalIdCardProps> = ({ student, onClose
 
             {/* Micro Stations Progress */}
             <div className="pt-2">
-              <span className="text-[10px] text-slate-400 block mb-1.5 font-bold">إنجاز المحطات الست:</span>
-              <div className="grid grid-cols-6 gap-1.5 text-center">
-                {[
-                  { key: 'falcon', icon: '🦅', name: 'السباق' },
-                  { key: 'cipher', icon: '🔐', name: 'الشيفرة' },
-                  { key: 'flasks', icon: '⚗️', name: 'الدوارق' },
-                  { key: 'furnace', icon: '🔥', name: 'الفرن' },
-                  { key: 'detective', icon: '🕵️', name: 'المحقق' },
-                  { key: 'rescue', icon: '🛟', name: 'النجاة' },
-                ].map(item => {
-                  const done = student.completedGames.includes(item.key);
-                  const score = student.scores[item.key as keyof typeof student.scores] || 0;
+              <span className="text-[10px] text-slate-400 block mb-1.5 font-bold">نقاط المختبرات:</span>
+              <div className="grid grid-cols-4 gap-1.5 text-center">
+                {([['at', '⚛️', 'الذرة'], ['ca', '🧪', 'الكالسيوم'], ['su', '🔥', 'الكبريت'], ['si', '💡', 'السيليكون']] as const).map(([k, icon, name]) => {
+                  const pts = student.labPoints?.[k] ?? 0;
                   return (
-                    <div
-                      key={item.key}
-                      className={`p-1.5 rounded-lg border text-[10px] flex flex-col items-center justify-center ${
-                        done
-                          ? 'bg-amber-500/15 border-amber-500/50 text-amber-300'
-                          : 'bg-slate-900 border-slate-800 text-slate-500'
-                      }`}
-                    >
-                      <span className="text-base">{item.icon}</span>
-                      <span className="font-extrabold">{score > 0 ? score : '—'}</span>
+                    <div key={k} className={`p-1.5 rounded-lg border text-[10px] flex flex-col items-center justify-center ${pts ? 'bg-amber-500/15 border-amber-500/50 text-amber-300' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>
+                      <span className="text-base" aria-hidden="true">{icon}</span>
+                      <span>{name}</span>
+                      <b className="font-mono">{pts}</b>
                     </div>
                   );
                 })}

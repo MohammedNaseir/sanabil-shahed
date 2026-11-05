@@ -59,6 +59,18 @@ if (cssFiles.length === 1) {
   html = html.replace(/<link[^>]*rel="stylesheet"[^>]*href="[^"]*\.css"[^>]*>/i, () => `<style>\n${css}\n</style>`);
 }
 html = html.replace(/<link[^>]*rel="modulepreload"[^>]*>/gi, '');
+
+// صور محتوى المختبر تُطلب بمسار يُبنى وقت التشغيل، فنضمّنها كجدول قبل السكربت
+const v5Dir = path.join(publicDir, 'assets', 'v5');
+const v5 = {};
+if (fs.existsSync(v5Dir)) {
+  for (const f of fs.readdirSync(v5Dir)) {
+    if (!f.endsWith('.webp') || f.endsWith('-sm.webp')) continue;
+    v5[f.replace('.webp', '')] = `data:image/webp;base64,${fs.readFileSync(path.join(v5Dir, f)).toString('base64')}`;
+  }
+}
+html = html.replace('<script type="module">', () => `<script>window.__V5_IMG=${JSON.stringify(v5)};</script>
+<script type="module">`);
 html = embedPublicAssets(html);
 
 if (/src="\/assets\/|href="\/assets\//.test(html)) fail('ما زالت هناك مراجع لملفات خارجية في الملف الناتج.');
@@ -68,4 +80,4 @@ const outPath = path.join(outDir, OUT_NAME);
 fs.writeFileSync(outPath, html, 'utf-8');
 fs.rmSync(buildDir, { recursive: true, force: true });
 
-console.log(`✔ النسخة المستقلة: ${path.relative(root, outPath)} (${(fs.statSync(outPath).size / 1e6).toFixed(2)}MB، ${embedded.size} صور مدمجة)`);
+console.log(`✔ النسخة المستقلة: ${path.relative(root, outPath)} (${(fs.statSync(outPath).size / 1e6).toFixed(2)}MB، ${embedded.size + Object.keys(v5).length} صور مدمجة)`);

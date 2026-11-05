@@ -239,3 +239,31 @@
     background-color: color-mix(in srgb, var(--surface) 97%, transparent) !important;
   }
 }
+
+/* ===== حركات ألعاب المختبر (منقولة من v5) ===== */
+@keyframes timer-shrink { from { width: 100%; } to { width: 0; } }
+.timer-shrink { animation: timer-shrink linear forwards; }
+
+/* البالونات: تصعد من أسفل الساحة إلى أعلاها */
+@keyframes balloon-rise { from { bottom: -100px; } to { bottom: calc(100% + 40px); } }
+.balloon { bottom: -100px; animation-name: balloon-rise; animation-timing-function: linear; animation-fill-mode: forwards; }
+@keyframes balloon-pop { to { transform: scale(1.8); opacity: 0; } }
+.balloon-pop { animation: balloon-pop 0.35s forwards !important; }
+
+@keyframes relay-run { from { transform: translateX(-40px); opacity: 0.2; } to { transform: none; opacity: 1; } }
+.relay-run { animation: relay-run 0.6s; }
+@keyframes memo-pulse { 50% { transform: scale(1.08); } }
+.memo-pulse { animation: memo-pulse 0.5s; }
+
+/* فقاعات وتوهج مشاهد التجارب */
+@keyframes bubble-rise { from { transform: translateY(0); opacity: 0.9; } to { transform: translateY(-110px); opacity: 0; } }
+.bubble { animation: bubble-rise 1.8s linear infinite; transform-box: fill-box; }
+@keyframes flame-flicker { from { transform: scaleY(0.85); } to { transform: scaleY(1.1); } }
+.flame { animation: flame-flicker 0.4s ease-in-out infinite alternate; transform-origin: 50% 100%; transform-box: fill-box; }
+@keyframes wave-move { to { transform: translateX(50px); } }
+.wave { animation: wave-move 3s linear infinite; }
+.sink-char { transition: transform 0.9s cubic-bezier(0.3, 1.4, 0.5, 1); }
+
+/* شاشة «فُتح مختبر العناصر» */
+@keyframes unlock-glow { 0% { opacity: 0; transform: scale(0.9); } 15% { opacity: 1; transform: none; } 85% { opacity: 1; } 100% { opacity: 0; } }
+.unlock-fx { animation: unlock-glow 3.8s ease-in-out forwards; }

@@ -1,54 +1,58 @@
 /**
  * التنقّل عبر عنوان الصفحة (hash) حتى يعمل زر الرجوع في المتصفح والجوال،
- * ويمكن مشاركة رابط مباشر لمحطة معيّنة، ويستعيد التحديث الشاشة نفسها.
+ * ويمكن مشاركة رابط مباشر لبوابة أو مختبر، ويستعيد التحديث الشاشة نفسها.
  *
  * الصيغ:
- *   #/                 شاشة الاستقبال
- *   #/labs             اختيار المختبر
- *   #/silicon          مختبر السيليكون
- *   #/silicon/<game>   لعبة سيليكون
- *   #/atomic           مختبر الذرة
- *   #/atomic/<dest>    وجهة في مختبر الذرة
- *   #/gateway          بوابة المختبرين
+ *   #/                  شاشة الاستقبال
+ *   #/labs              اختيار المختبر
+ *   #/atom              مختبر الذرة
+ *   #/atom/1 … #/atom/6 بوابة من بوابات الذرة
+ *   #/elements          مختبر العناصر
+ *   #/elements/ca|su|si مختبر الكالسيوم أو الكبريت أو السيليكون
+ *   #/finale            شاشة الإنجاز الختامية
  */
-import { SILICON_GAME_IDS } from '../data/atomicTasks';
 
-export const ATOMIC_DESTINATIONS = ['timeline', 'infer', 'explain', 'error_detective', 'whatif', 'final_challenge'] as const;
-export type AtomicDestination = typeof ATOMIC_DESTINATIONS[number];
+export const ELEMENT_IDS = ['ca', 'su', 'si'] as const;
+export type ElementId = typeof ELEMENT_IDS[number];
+export const ATOM_GATE_COUNT = 6;
 
-export type ViewName = 'reception' | 'lab_selection' | 'silicon_hub' | 'silicon_game' | 'atomic_hub' | 'destination' | 'gateway';
+export type ViewName = 'reception' | 'lab_selection' | 'atom_hub' | 'atom_gate' | 'elements_hub' | 'element_lab' | 'finale';
 
 export interface Route {
   view: ViewName;
-  station: string | null;
-  destination: AtomicDestination | null;
+  /** رقم البوابة (0..5). */
+  gate: number | null;
+  lab: ElementId | null;
 }
 
-export const HOME_ROUTE: Route = { view: 'reception', station: null, destination: null };
+export const HOME_ROUTE: Route = { view: 'reception', gate: null, lab: null };
+const r = (view: ViewName, gate: number | null = null, lab: ElementId | null = null): Route => ({ view, gate, lab });
 
 export function parseHash(hash: string): { route: Route; valid: boolean } {
   const clean = hash.replace(/^#\/?/, '').replace(/\/+$/, '');
   const [first = '', second, ...rest] = clean.split('/').map(p => decodeURIComponent(p));
-  const r = (view: ViewName, station: string | null = null, destination: AtomicDestination | null = null) =>
-    ({ route: { view, station, destination }, valid: rest.length === 0 });
+  const ok = (route: Route) => ({ route, valid: rest.length === 0 });
+  const bad = (route: Route) => ({ route, valid: false });
 
   switch (first) {
     case '':
-      return r('reception');
+      return ok(HOME_ROUTE);
     case 'labs':
-      return second ? { route: HOME_ROUTE, valid: false } : r('lab_selection');
-    case 'gateway':
-      return second ? { route: HOME_ROUTE, valid: false } : r('gateway');
-    case 'silicon':
-      if (!second) return r('silicon_hub');
-      if ((SILICON_GAME_IDS as readonly string[]).includes(second)) return r('silicon_game', second);
-      return { route: { view: 'silicon_hub', station: null, destination: null }, valid: false };
-    case 'atomic':
-      if (!second) return r('atomic_hub');
-      if ((ATOMIC_DESTINATIONS as readonly string[]).includes(second)) return r('destination', null, second as AtomicDestination);
-      return { route: { view: 'atomic_hub', station: null, destination: null }, valid: false };
+      return second ? bad(r('lab_selection')) : ok(r('lab_selection'));
+    case 'finale':
+      return second ? bad(r('finale')) : ok(r('finale'));
+    case 'atom': {
+      if (!second) return ok(r('atom_hub'));
+      const n = Number(second);
+      if (Number.isInteger(n) && n >= 1 && n <= ATOM_GATE_COUNT) return ok(r('atom_gate', n - 1));
+      return bad(r('atom_hub'));
+    }
+    case 'elements':
+      if (!second) return ok(r('elements_hub'));
+      if ((ELEMENT_IDS as readonly string[]).includes(second)) return ok(r('element_lab', null, second as ElementId));
+      return bad(r('elements_hub'));
     default:
-      return { route: HOME_ROUTE, valid: false };
+      return bad(HOME_ROUTE);
   }
 }
 
@@ -56,14 +60,14 @@ export function formatHash(route: Route): string {
   switch (route.view) {
     case 'reception': return '#/';
     case 'lab_selection': return '#/labs';
-    case 'gateway': return '#/gateway';
-    case 'silicon_hub': return '#/silicon';
-    case 'silicon_game': return route.station ? `#/silicon/${route.station}` : '#/silicon';
-    case 'atomic_hub': return '#/atomic';
-    case 'destination': return route.destination ? `#/atomic/${route.destination}` : '#/atomic';
+    case 'finale': return '#/finale';
+    case 'atom_hub': return '#/atom';
+    case 'atom_gate': return route.gate != null ? `#/atom/${route.gate + 1}` : '#/atom';
+    case 'elements_hub': return '#/elements';
+    case 'element_lab': return route.lab ? `#/elements/${route.lab}` : '#/elements';
   }
 }
 
 export function sameRoute(a: Route, b: Route) {
-  return a.view === b.view && a.station === b.station && a.destination === b.destination;
+  return a.view === b.view && a.gate === b.gate && a.lab === b.lab;
 }

@@ -15,7 +15,7 @@
     "preview": "vite preview",
     "clean": "node -e \"for (const d of ['dist','dist-server','dist-standalone']) require('fs').rmSync(d,{recursive:true,force:true})\"",
     "lint": "tsc --noEmit",
-    "test": "tsx --test tests/server.test.ts tests/scoreQueue.test.ts tests/routing.test.ts tests/content.test.ts"
+    "test": "tsx --test tests/server.test.ts tests/scoreQueue.test.ts tests/routing.test.ts tests/content-v5.test.ts"
   },
   "dependencies": {
     "dotenv": "^17.2.3",

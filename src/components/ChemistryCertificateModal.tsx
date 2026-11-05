@@ -3,6 +3,7 @@ import { useDialog } from '../utils/useDialog';
 import { X, Printer, Award, Sparkles, CheckCircle2 } from 'lucide-react';
 import { Student } from '../types';
 import { sounds } from '../utils/audio';
+import { LAB_MAX, rankTitle } from '../content/tasks';
 
 interface ChemistryCertificateModalProps {
   student: Student;
@@ -14,7 +15,7 @@ export const ChemistryCertificateModal: React.FC<ChemistryCertificateModalProps>
   onClose,
 }) => {
   const { dialogProps, titleId } = useDialog(onClose);
-  const TOTAL_POINTS = 52; // إجمالي نقاط المحطات الست
+  const TOTAL_POINTS = LAB_MAX.at + LAB_MAX.ca + LAB_MAX.su + LAB_MAX.si; // مجموع نقاط المختبرات الأربعة
 
   const handlePrint = () => {
     sounds.click();
@@ -41,7 +42,7 @@ export const ChemistryCertificateModal: React.FC<ChemistryCertificateModalProps>
         {/* Certificate Container (Styled for Screen & High-Res Print) */}
         <div
           id="certificate-print-area"
-          className="relative rounded-2xl bg-gradient-to-br from-[#070e22] via-[#0b1736] to-[#060c1d] border-4 border-amber-400/80 p-6 sm:p-10 shadow-2xl overflow-hidden text-center text-slate-100"
+          className="relative rounded-2xl bg-slate-950 border-4 border-amber-400/80 p-6 sm:p-10 shadow-2xl overflow-hidden text-center text-slate-100"
           style={{
             backgroundImage: `radial-gradient(circle at center, rgba(30, 58, 138, 0.25) 0%, rgba(2, 6, 23, 0.95) 100%)`
           }}
@@ -68,7 +69,7 @@ export const ChemistryCertificateModal: React.FC<ChemistryCertificateModalProps>
               مـنـصـة سـنـابـل الـتـعـلـيـمـيـة • مـخـتـبـر الـكـيـمـيـاء
             </span>
             <h2 id={titleId} className="text-2xl sm:text-3xl md:text-4xl font-black bg-gradient-to-r from-amber-300 via-amber-100 to-amber-400 bg-clip-text text-transparent">
-              شـهـادة وسـام الـتـحـلـيـق الـكـيـمـيـائـي
+              شهادة رحلة البحث والاكتشاف
             </h2>
             <div className="h-0.5 w-32 sm:w-48 bg-gradient-to-r from-transparent via-amber-400 to-transparent my-1" />
           </div>
@@ -85,7 +86,7 @@ export const ChemistryCertificateModal: React.FC<ChemistryCertificateModalProps>
                 {student.fullName}
               </span>
               <div className="flex items-center justify-center gap-2 mt-2 font-mono text-xs text-slate-300">
-                <span className="text-slate-400">الهوية الكيميائية:</span>
+                <span className="text-slate-400">رقم الطالب:</span>
                 <span className="bg-amber-500/20 px-2.5 py-0.5 rounded text-amber-300 font-black border border-amber-500/30">
                   {student.chemicalId || student.id}
                 </span>
@@ -93,7 +94,7 @@ export const ChemistryCertificateModal: React.FC<ChemistryCertificateModalProps>
             </div>
 
             <p className="text-slate-200 text-xs sm:text-sm">
-              تقديراً لاجتيازه محطات <b className="text-amber-300">«مختبر السيليكون ومركباته — الصف العاشر»</b> بجدارة واقتدار، وتحقيق رصيد تفوق قدره:
+              تقديراً لإنجازه مختبرَي <b className="text-amber-300">«الذرة» و«العناصر: الكالسيوم والكبريت والسيليكون» — الصف العاشر</b>، ونيله لقب <b className="text-amber-300">«{rankTitle(student.totalPoints)}»</b> برصيد:
             </p>
 
             {/* Score Highlight Box */}
@@ -117,7 +118,7 @@ export const ChemistryCertificateModal: React.FC<ChemistryCertificateModalProps>
                 <span>🦅 تحية فخر واعتزاز بلغة الصقور والكيمياء:</span>
               </span>
               <p className="text-xs text-slate-300 leading-relaxed font-bold">
-                «حلّقت في آفاق الكيمياء كصقرٍ كيميائي جسور لا يرضى إلا بأعلى القمم، وأثبتّ أن عزيمتك متماسكة كأقوى الروابط التساهمية في بلورة السيليكون، وأن فكرك ساطع كبريق الكوارتز النقي! دمت فخراً لمعلمتك وصقراً متألقاً في سماء منصة سنابل.»
+                خرجتَ من مختبر أ. شهد وقد عشتَ تجربة كيميائية واكتشفتَ بنفسك. فضولك هو بداية كل اكتشاف جديد!
               </p>
             </div>
           </div>

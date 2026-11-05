@@ -6,9 +6,13 @@
 import type { Student } from '../types';
 import { readJSON, safeRemove, writeJSON } from './storage';
 
-export type QueueItem =
-  | { kind: 'silicon'; gameId: string; score: number; epoch: number; createdAt: number }
-  | { kind: 'atomic'; taskId: string; epoch: number; createdAt: number };
+export interface QueueItem {
+  kind: 'task';
+  taskId: string;
+  points: number;
+  epoch: number;
+  createdAt: number;
+}
 
 export type SyncState =
   | 'saved'            // كل النقاط وصلت للخادم
@@ -19,12 +23,12 @@ export type SyncState =
   | 'error';           // خطأ دائم (مثلاً مفتاح غير صالح)
 
 export function queueKey(studentId: string) {
-  return `shhd_score_queue_v1:${studentId}`;
+  return `shhd_score_queue_v2:${studentId}`;
 }
 
 export function loadQueue(studentId: string): QueueItem[] {
   const q = readJSON<QueueItem[]>(queueKey(studentId), []);
-  return Array.isArray(q) ? q : [];
+  return Array.isArray(q) ? q.filter(i => i && i.kind === 'task') : [];
 }
 
 function saveQueue(studentId: string, items: QueueItem[]) {
@@ -36,26 +40,12 @@ export function clearQueue(studentId: string) {
   safeRemove(queueKey(studentId));
 }
 
-/** يضيف نتيجة لعبة سيليكون، ويحتفظ بالأعلى إن وُجدت نتيجة سابقة للعبة نفسها. */
-export function enqueueSilicon(studentId: string, gameId: string, score: number, epoch: number) {
+/** يضيف نتيجة مهمة مرة واحدة فقط (أول محاولة هي التي تُحتسب). */
+export function enqueueTask(studentId: string, taskId: string, points: number, epoch: number) {
   const items = loadQueue(studentId);
-  const existing = items.find(i => i.kind === 'silicon' && i.gameId === gameId);
-  if (existing && existing.kind === 'silicon') {
-    existing.score = Math.max(existing.score, score);
-    existing.epoch = epoch;
-  } else {
-    items.push({ kind: 'silicon', gameId, score, epoch, createdAt: Date.now() });
-  }
+  if (items.some(i => i.taskId === taskId)) return;
+  items.push({ kind: 'task', taskId, points, epoch, createdAt: Date.now() });
   saveQueue(studentId, items);
-}
-
-/** يضيف مهمة ذرة محلولة (مرة واحدة فقط). */
-export function enqueueAtomic(studentId: string, taskId: string, epoch: number) {
-  const items = loadQueue(studentId);
-  if (!items.some(i => i.kind === 'atomic' && i.taskId === taskId)) {
-    items.push({ kind: 'atomic', taskId, epoch, createdAt: Date.now() });
-    saveQueue(studentId, items);
-  }
 }
 
 export interface FlushResult {
@@ -91,16 +81,12 @@ async function doFlush(studentId: string, studentKey: string | null, fetchImpl: 
 
   while (items.length > 0) {
     const item = items[0];
-    const body = item.kind === 'silicon'
-      ? { studentId, studentKey, gameId: item.gameId, score: item.score, epoch: item.epoch }
-      : { studentId, studentKey, taskId: item.taskId, epoch: item.epoch };
-
     let res: Response;
     try {
       res = await fetchImpl('/api/student/score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ studentId, studentKey, taskId: item.taskId, points: item.points, epoch: item.epoch }),
       });
     } catch {
       return { state: 'offline', student: lastStudent, wasReset };
@@ -129,16 +115,9 @@ async function doFlush(studentId: string, studentKey: string | null, fetchImpl: 
     }
 
     // أزل العنصر المُعالَج فقط (قد تكون أضيفت عناصر جديدة أثناء الإرسال)
-    items = loadQueue(studentId).filter(i => !sameItem(i, item));
+    items = loadQueue(studentId).filter(i => i.taskId !== item.taskId);
     saveQueue(studentId, items);
   }
 
   return { state: 'saved', student: lastStudent, wasReset };
-}
-
-function sameItem(a: QueueItem, b: QueueItem) {
-  if (a.kind !== b.kind) return false;
-  if (a.kind === 'silicon' && b.kind === 'silicon') return a.gameId === b.gameId && a.score <= b.score;
-  if (a.kind === 'atomic' && b.kind === 'atomic') return a.taskId === b.taskId;
-  return false;
 }
