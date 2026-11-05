@@ -4,7 +4,7 @@ import { useDialog } from '../utils/useDialog';
 import { 
   X, Lock, ShieldCheck, UserCheck, Users, Trophy, Settings, 
   CheckCircle, XCircle, RefreshCw, Power, AlertTriangle, Search,
-  Award, FileSpreadsheet, Trash2, Share2, Download, KeyRound
+  Award, FileSpreadsheet, Trash2, Share2, KeyRound
 } from 'lucide-react';
 import { Student, LabSession } from '../types';
 import { sounds } from '../utils/audio';
@@ -269,16 +269,6 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onClose, onR
           </div>
 
           <div className="flex items-center gap-2">
-            <a
-              href="/api/download/lab-html"
-              download="مختبر_الأسئلة_صقور_أ_شهد.html"
-              className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 transition-colors"
-              title="تحميل ملف المختبر التفاعلي الكامل كملف HTML مستقل"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">تحميل ملف HTML للواتساب</span>
-              <span className="sm:hidden">تحميل HTML</span>
-            </a>
             <button
               onClick={() => {
                 sounds.click();
@@ -558,7 +548,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onClose, onR
                             <td className="p-3 font-bold text-white whitespace-nowrap">
                               {student.fullName}
                             </td>
-                            <td className="p-3 font-mono text-amber-300 font-bold text-xs">
+                            <td className="p-3 font-mono text-amber-300 font-bold text-xs whitespace-nowrap" dir="ltr">
                               {student.chemicalId || student.id}
                             </td>
                             <td className="p-3">

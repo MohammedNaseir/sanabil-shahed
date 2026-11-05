@@ -6,7 +6,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 COPY . .
-# يبني الواجهة (dist) والخادم (dist-server) والنسخة المستقلة (dist-standalone)
+# يبني الواجهة (dist) والخادم (dist-server)
 RUN npm run build
 
 # ========== المرحلة 2: التشغيل ==========
@@ -22,7 +22,6 @@ RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/dist-server ./dist-server
-COPY --from=build /app/dist-standalone ./dist-standalone
 
 # مجلد البيانات يُربط بـ volume دائم في docker-compose
 RUN mkdir -p /app/data && chown -R node:node /app/data

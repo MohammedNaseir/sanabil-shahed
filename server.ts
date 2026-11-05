@@ -11,6 +11,7 @@ import {
   atomFinalDone,
   atomGateDone,
   stationDoneId,
+  LAB_IDS,
 } from './src/content/tasks';
 import { ATOM_GATES } from './src/content/atom';
 import { ELEMENT_LABS } from './src/content/elements';
@@ -24,7 +25,6 @@ if (IS_PRODUCTION) process.env.NODE_ENV = 'production';
 
 const PORT = Number(process.env.PORT) || 3000;
 const ONLINE_WINDOW_MS = 45_000;
-const STANDALONE_FILE_NAME = 'مختبر_الأسئلة_صقور_أ_شهد.html';
 
 const app = express();
 app.disable('x-powered-by');
@@ -32,7 +32,10 @@ app.disable('x-powered-by');
 // وإلا يستطيع أي أحد تغييرها لتجاوز حد محاولات الدخول.
 const TRUST_PROXY = (process.env.TRUST_PROXY || '').trim();
 app.set('trust proxy', /^\d+$/.test(TRUST_PROXY) ? Number(TRUST_PROXY) : TRUST_PROXY === 'true' ? 1 : false);
-app.use(express.json({ limit: '32kb' }));
+// دفتر الباحث أكبر قليلاً من باقي الطلبات، فنعطيه حداً خاصاً
+const jsonSmall = express.json({ limit: '32kb' });
+const jsonJournal = express.json({ limit: '128kb' });
+app.use((req, res, next) => (req.path === '/api/student/journal' ? jsonJournal : jsonSmall)(req, res, next));
 
 // =================== TEACHER AUTH ===================
 
@@ -115,6 +118,50 @@ const DB_FILE = path.join(DATA_DIR, 'lab-store.json');
 
 type LabPoints = { at: number; ca: number; su: number; si: number };
 
+export interface Journal {
+  notebook: Record<string, { p: string; o: string; c: string }>;
+  conclusions: Record<string, Record<string, string>>;
+}
+
+const NOTE_MAX = 3000;
+const CONCLUSION_MAX = 400;
+const CONCLUSIONS_PER_LAB = 30;
+
+const clip = (v: unknown, n: number) => (typeof v === 'string' ? v.slice(0, n) : '');
+
+/** ينظّف الدفتر القادم من الطالب: مختبرات معروفة فقط ونصوص بطول محدود. */
+function cleanJournal(raw: unknown): Journal {
+  const out: Journal = { notebook: {}, conclusions: {} };
+  const r = (raw && typeof raw === 'object' ? raw : {}) as { notebook?: unknown; conclusions?: unknown };
+  const nb = (r.notebook && typeof r.notebook === 'object' ? r.notebook : {}) as Record<string, unknown>;
+  const cs = (r.conclusions && typeof r.conclusions === 'object' ? r.conclusions : {}) as Record<string, unknown>;
+  for (const lab of LAB_IDS) {
+    const page = nb[lab] as Record<string, unknown> | undefined;
+    if (page && typeof page === 'object') {
+      const pg = { p: clip(page.p, NOTE_MAX), o: clip(page.o, NOTE_MAX), c: clip(page.c, NOTE_MAX) };
+      if (pg.p || pg.o || pg.c) out.notebook[lab] = pg;
+    }
+    const m = cs[lab] as Record<string, unknown> | undefined;
+    if (m && typeof m === 'object') {
+      const entries = Object.entries(m).filter(([k, v]) => k.length <= 60 && typeof v === 'string').slice(0, CONCLUSIONS_PER_LAB);
+      if (entries.length) out.conclusions[lab] = Object.fromEntries(entries.map(([k, v]) => [k, clip(v, CONCLUSION_MAX)]));
+    }
+  }
+  return out;
+}
+
+function mergeJournal(base: Journal | undefined, incoming: Journal): Journal {
+  const out: Journal = { notebook: { ...(base?.notebook ?? {}) }, conclusions: { ...(base?.conclusions ?? {}) } };
+  for (const [lab, pg] of Object.entries(incoming.notebook)) {
+    const cur = out.notebook[lab] ?? { p: '', o: '', c: '' };
+    out.notebook[lab] = { p: pg.p || cur.p, o: pg.o || cur.o, c: pg.c || cur.c };
+  }
+  for (const [lab, m] of Object.entries(incoming.conclusions)) {
+    out.conclusions[lab] = Object.fromEntries(Object.entries({ ...out.conclusions[lab], ...m }).slice(0, CONCLUSIONS_PER_LAB));
+  }
+  return out;
+}
+
 export interface StudentRecord {
   id: string;
   /** مفتاح سري يُعطى للطالب عند التسجيل ويُطلب عند إرسال النقاط. */
@@ -134,6 +181,8 @@ export interface StudentRecord {
   totalPoints: number;
   /** نقاط النسخة السابقة من المختبر (محفوظة للرجوع إليها، لا تُحتسب). */
   legacy?: Record<string, unknown>;
+  /** دفتر الباحث واستنتاجات التجارب، ليعود للطالب من أي جهاز. */
+  journal?: Journal;
   /** يزيد عند تصفير المعلمة للنقاط حتى ترفض الإرسالات القديمة. */
   scoreEpoch: number;
   lastActive: number;
@@ -211,6 +260,7 @@ function normalizeStudent(raw: Partial<StudentRecord> & { id: string }): Student
     labPoints: { at: 0, ca: 0, su: 0, si: 0 },
     totalPoints: 0,
     ...(legacy ? { legacy } : {}),
+    ...(raw.journal ? { journal: cleanJournal(raw.journal) } : {}),
     scoreEpoch: Number(raw.scoreEpoch) || 0,
     lastActive: Number(raw.lastActive) || 0,
   };
@@ -275,8 +325,13 @@ setInterval(() => backupDB('daily'), 60 * 60 * 1000).unref();
 
 /** نسخة الطالب الآمنة للإرسال (بدون المفتاح السري). */
 function publicStudent(s: StudentRecord) {
-  const { key: _key, pinHash: _pin, legacy: _legacy, ...rest } = s;
+  const { key: _key, pinHash: _pin, legacy: _legacy, journal: _journal, ...rest } = s;
   return { ...rest, summary: progressSummary(s) };
+}
+
+/** للطالب نفسه فقط (بعد التحقق من الرقم السري أو المفتاح): مع الدفتر. */
+function ownStudent(s: StudentRecord) {
+  return { ...publicStudent(s), journal: s.journal ?? { notebook: {}, conclusions: {} } };
 }
 
 function isOnline(s: StudentRecord, now = Date.now()) {
@@ -292,10 +347,10 @@ function checkStudentKey(s: StudentRecord, key: unknown): boolean {
 
 function newStudentId(): string {
   for (let i = 0; i < 50; i++) {
-    const id = `SQR-Si-${crypto.randomInt(1000, 10000)}`;
+    const id = `SQR-${crypto.randomInt(1000, 10000)}`;
     if (!store.students[id]) return id;
   }
-  return `SQR-Si-${crypto.randomUUID().slice(0, 8)}`;
+  return `SQR-${crypto.randomUUID().slice(0, 8)}`;
 }
 
 // =================== API ENDPOINTS ===================
@@ -311,21 +366,6 @@ app.get('/api/session', (_req: Request, res: Response) => {
     totalRegistered: Object.keys(store.students).length,
     activeCount: Object.values(store.students).filter(s => isOnline(s, now)).length,
   });
-});
-
-// تنزيل نسخة المختبر المستقلة (تعمل دون خادم). نفضّل أحدث نسخة مبنية.
-app.get('/api/download/lab-html', (_req: Request, res: Response) => {
-  const candidates = [
-    path.join(ROOT, 'dist-standalone', STANDALONE_FILE_NAME),
-    path.join(ROOT, 'public', STANDALONE_FILE_NAME),
-  ].filter(p => fs.existsSync(p));
-  if (candidates.length === 0) {
-    res.status(404).send('ملف التحميل غير متاح حالياً. شغّلي npm run build:standalone أولاً.');
-    return;
-  }
-  const newest = candidates.sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
-  res.setHeader('Cache-Control', 'no-store');
-  res.download(newest, STANDALONE_FILE_NAME);
 });
 
 // ---------- الرقم السري للطالب ----------
@@ -408,7 +448,7 @@ app.post('/api/student/register', (req: Request, res: Response): void => {
     if (!existing.key) existing.key = crypto.randomBytes(16).toString('hex');
     existing.lastActive = Date.now();
     saveDB();
-    res.json({ success: true, student: publicStudent(existing), studentKey: existing.key, isExisting: true });
+    res.json({ success: true, student: ownStudent(existing), studentKey: existing.key, isExisting: true });
     return;
   }
 
@@ -453,6 +493,28 @@ app.post('/api/student/heartbeat', (req: Request, res: Response): void => {
     return;
   }
   res.status(404).json({ ok: false });
+});
+
+/**
+ * حفظ دفتر الباحث: { studentId, studentKey, notebook, conclusions }
+ * يُدمج مع المحفوظ: الحقل الفارغ لا يمسح ما كُتب من جهاز آخر، ويعود الدفتر المدمج للجهاز.
+ * مسموح قبل اعتماد المعلمة أيضاً، فالدفتر ليس نقاطاً.
+ */
+app.post('/api/student/journal', (req: Request, res: Response): void => {
+  const { studentId, studentKey } = req.body || {};
+  const student = typeof studentId === 'string' ? store.students[studentId] : undefined;
+  if (!student) {
+    res.status(404).json({ error: 'الصقر غير موجود', code: 'not_found' });
+    return;
+  }
+  if (!checkStudentKey(student, studentKey)) {
+    res.status(403).json({ error: 'مفتاح الطالب غير صحيح', code: 'bad_key' });
+    return;
+  }
+  student.journal = mergeJournal(student.journal, cleanJournal(req.body));
+  student.lastActive = Date.now();
+  saveDB();
+  res.json({ ok: true, journal: student.journal });
 });
 
 /**

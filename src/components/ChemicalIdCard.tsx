@@ -3,6 +3,7 @@ import { X, Award, Shield, CheckCircle2, Clock, Printer, Sparkles, Flame, Atom }
 import { Student } from '../types';
 import { sounds } from '../utils/audio';
 import { useDialog } from '../utils/useDialog';
+import { rankTitle } from '../content/tasks';
 
 interface ChemicalIdCardProps {
   student: Student;
@@ -65,7 +66,7 @@ export const ChemicalIdCard: React.FC<ChemicalIdCardProps> = ({ student, onClose
                   جمهورية الكيمياء الرقمية
                 </span>
                 <span className="text-sm font-black text-slate-100">
-                  مختبر السيليكون التفاعلي
+                  مختبرا الذرة والعناصر
                 </span>
               </div>
             </div>
@@ -93,7 +94,7 @@ export const ChemicalIdCard: React.FC<ChemicalIdCardProps> = ({ student, onClose
                 <span className="text-[11px] text-slate-400 block mb-0.5">اللقب الكيميائي</span>
                 <span className="text-xs sm:text-sm font-bold text-amber-300 flex items-center gap-1">
                   <Shield className="w-3.5 h-3.5 text-amber-400" />
-                  {student.falconTitle}
+                  {rankTitle(student.totalPoints)}
                 </span>
               </div>
 
@@ -166,7 +167,7 @@ export const ChemicalIdCard: React.FC<ChemicalIdCardProps> = ({ student, onClose
 
           {/* Footer security chip visual */}
           <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500">
-            <span className="font-mono tracking-wider">CH-SEC-GRADE10-SI</span>
+            <span className="font-mono tracking-wider">SANABIL · CHEM-10</span>
             <span className="text-amber-400 font-bold">✨ صقر معتمد</span>
           </div>
         </div>
@@ -182,7 +183,7 @@ export const ChemicalIdCard: React.FC<ChemicalIdCardProps> = ({ student, onClose
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-blue-900/30 to-amber-500/20 hover:from-amber-500/30 hover:to-blue-900/50 border border-amber-400 text-amber-300 text-xs font-black transition-all shadow-md"
             >
               <Award className="w-4 h-4 text-amber-400" />
-              <span>📜 شهادة وسام التحليق</span>
+              <span>📜 شهادة رحلة البحث</span>
             </button>
           )}
 

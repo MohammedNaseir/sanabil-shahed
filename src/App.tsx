@@ -25,7 +25,7 @@ import { type Route, type ElementId, HOME_ROUTE, formatHash, parseHash, sameRout
 import { usePolling } from './utils/usePolling';
 import {
   GUEST_SCOPE, type Progress, type NotebookPage, applyServerStudent, emptyProgress, loadProgress, loadStudent, loadStudentKey,
-  mergeProgress, removeProgress, saveProgress, saveStudent, saveStudentKey,
+  mergeJournal, mergeProgress, removeProgress, saveProgress, saveStudent, saveStudentKey,
 } from './utils/studentStore';
 import { type SyncState, clearQueue, enqueueTask, flushQueue, loadQueue } from './utils/scoreQueue';
 import { TASK_POINTS, isTaskId, labTotals, atomFinalDone, ATOM_TASK_COUNT, ELEMENT_STATION_COUNT, elementStationsDone, type LabId } from './content/tasks';
@@ -276,6 +276,45 @@ export default function App() {
     updateProgress(p => ({ ...p, conclusions: { ...p.conclusions, [lab]: { ...(p.conclusions[lab] || {}), [tag]: sum } } }));
   }, [updateProgress]);
 
+  // =================== حفظ دفتر الباحث على الخادم ===================
+  // يُرسل بعد ثوانٍ من آخر تعديل، ويعود الدفتر المدمج من كل الأجهزة.
+  const journalSent = useRef<string | null>(null);
+  const pushJournal = useCallback(async () => {
+    const s = studentRef.current;
+    const key = keyRef.current;
+    const ps = progressStateRef.current;
+    if (!s || s.isLocal || !key || ps.scope !== s.id) return;
+    const sig = JSON.stringify([ps.progress.notebook, ps.progress.conclusions]);
+    if (sig === journalSent.current) return;
+    try {
+      const res = await fetch('/api/student/journal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId: s.id, studentKey: key, notebook: ps.progress.notebook, conclusions: ps.progress.conclusions }),
+      });
+      if (!res.ok || studentRef.current?.id !== s.id) return;
+      const data = await res.json().catch(() => null) as { journal?: Student['journal'] } | null;
+      journalSent.current = sig;
+      if (data?.journal) {
+        setProgressState(cur => {
+          if (cur.scope !== s.id) return cur;
+          const merged = mergeJournal(cur.progress, data.journal);
+          const mergedSig = JSON.stringify([merged.notebook, merged.conclusions]);
+          if (mergedSig === JSON.stringify([cur.progress.notebook, cur.progress.conclusions])) return cur;
+          saveProgress(s.id, merged);
+          return { scope: cur.scope, progress: merged };
+        });
+      }
+    } catch {
+      // دون اتصال: نعيد المحاولة مع التعديل التالي أو الاستعلام الدوري
+    }
+  }, []);
+  const journalSig = useMemo(() => JSON.stringify([progress.notebook, progress.conclusions]), [progress.notebook, progress.conclusions]);
+  useEffect(() => {
+    const id = setTimeout(() => void pushJournal(), 2500);
+    return () => clearTimeout(id);
+  }, [journalSig, currentStudent?.id, studentKey, serverReachable, pushJournal]);
+
   const labRuntime: LabRuntime = useMemo(() => ({ tasks: progress.tasks, award, note, conclude }), [progress.tasks, award, note, conclude]);
 
   // =================== فتح مختبر العناصر ===================
@@ -315,6 +354,11 @@ export default function App() {
       removeProgress(prevScope);
     }
     nextProgress = { ...nextProgress, epoch: Math.max(nextProgress.epoch, Number(student.scoreEpoch) || 0) };
+
+    // الدفتر المحفوظ على الخادم (من جهاز آخر) يُدمج هنا ولا يُخزَّن مع الهوية
+    const { journal, ...studentInfo } = student;
+    nextProgress = mergeJournal(nextProgress, journal);
+    student = studentInfo;
 
     if (prev && prev.id !== student.id) clearQueue(prev.id);
     setCurrentStudent(student);

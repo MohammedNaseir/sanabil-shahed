@@ -8,12 +8,11 @@
   },
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build && node scripts/precompress.js && npm run build:server && npm run build:standalone",
+    "build": "vite build && node scripts/precompress.js && npm run build:server",
     "build:server": "esbuild server.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-server/server.js",
-    "build:standalone": "vite build --config vite.standalone.config.ts && node scripts/make-standalone.js",
     "start": "node dist-server/server.js --production",
     "preview": "vite preview",
-    "clean": "node -e \"for (const d of ['dist','dist-server','dist-standalone']) require('fs').rmSync(d,{recursive:true,force:true})\"",
+    "clean": "node -e \"for (const d of ['dist','dist-server']) require('fs').rmSync(d,{recursive:true,force:true})\"",
     "lint": "tsc --noEmit",
     "test": "tsx --test tests/server.test.ts tests/scoreQueue.test.ts tests/routing.test.ts tests/content-v5.test.ts"
   },

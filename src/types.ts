@@ -35,6 +35,11 @@ export interface Student {
   scoreEpoch?: number;
   lastActive: number;
   isOnline?: boolean;
+  /** دفتر الباحث كما حفظه الخادم (يصل عند الدخول بالرقم السري فقط). */
+  journal?: {
+    notebook: Record<string, { p: string; o: string; c: string }>;
+    conclusions: Record<string, Record<string, string>>;
+  };
   /** هوية تدريب محلية أُنشئت دون اتصال بالخادم، وليست معتمدة لدى المعلمة. */
   isLocal?: boolean;
 }

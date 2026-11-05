@@ -6,9 +6,6 @@ import type { Variant } from './texts';
 
 /** مسار صورة من محتوى v5 (sm = نسخة مصغّرة للبطاقات والشريط). */
 export function img(key: string, size: 'full' | 'sm' = 'full') {
-  // النسخة المستقلة (ملف HTML واحد) تضمّن الصور داخل window.__V5_IMG
-  const embedded = (globalThis as { __V5_IMG?: Record<string, string> }).__V5_IMG;
-  if (embedded) return embedded[key] || '';
   return `/assets/v5/${key}${size === 'sm' ? '-sm' : ''}.webp`;
 }
 

@@ -222,6 +222,43 @@ test('دورة الطالب الكاملة: تسجيل، اعتماد، نقاط
   srv.stop();
 });
 
+test('دفتر الباحث يُحفظ على الخادم ويعود عند الدخول من جهاز آخر', async () => {
+  const srv = await startServer({ TEACHER_CODE: CODE });
+  let r = await srv.call('POST', '/api/student/register', { fullName: 'ليان سامي حسن', pin: '2468' });
+  const { id } = r.data.student;
+  const key = r.data.studentKey as string;
+
+  // المفتاح مطلوب
+  r = await srv.call('POST', '/api/student/journal', { studentId: id, studentKey: 'wrong', notebook: {} });
+  assert.equal(r.status, 403);
+
+  // الجهاز الأول يكتب في مختبر الذرة (مسموح قبل الاعتماد)
+  r = await srv.call('POST', '/api/student/journal', {
+    studentId: id, studentKey: key,
+    notebook: { at: { p: 'توقعت أن الإلكترونات تدور', o: '', c: '' }, xx: { p: 'مختبر غير معروف', o: '', c: '' } },
+    conclusions: { at: { t1: 'الذرة متعادلة' } },
+  });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.journal.notebook.xx, undefined, 'المختبرات غير المعروفة تُهمل');
+
+  // جهاز ثانٍ بدفتر فارغ لا يمسح ما كُتب، ويضيف مختبره
+  r = await srv.call('POST', '/api/student/journal', {
+    studentId: id, studentKey: key,
+    notebook: { at: { p: '', o: '', c: '' }, ca: { p: '', o: 'فقاعات غاز', c: '' } },
+    conclusions: {},
+  });
+  assert.equal(r.data.journal.notebook.at.p, 'توقعت أن الإلكترونات تدور');
+  assert.equal(r.data.journal.notebook.ca.o, 'فقاعات غاز');
+
+  // الدفتر لا يظهر في الاستعلام العام ولا في لوحة الشرف، ويعود عند الدخول بالرقم السري
+  r = await srv.call('GET', `/api/student/status/${id}`);
+  assert.equal(r.data.student.journal, undefined);
+  r = await srv.call('POST', '/api/student/register', { fullName: 'ليان سامي حسن', pin: '2468' });
+  assert.equal(r.data.student.journal.conclusions.at.t1, 'الذرة متعادلة');
+  assert.equal(r.data.student.journal.notebook.ca.o, 'فقاعات غاز');
+  srv.stop();
+});
+
 test('حد محاولات الرقم السري الخاطئة للطالب', async () => {
   const srv = await startServer({ TEACHER_CODE: CODE });
   await srv.call('POST', '/api/student/register', { fullName: 'أحمد محمد خالد', pin: '5555' });

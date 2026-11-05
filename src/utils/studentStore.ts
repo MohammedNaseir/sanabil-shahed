@@ -126,6 +126,18 @@ export function mergeProgress(into: Progress, from: Progress): Progress {
   return { tasks, notebook, conclusions, epoch: Math.max(into.epoch, from.epoch), unlockSeen: into.unlockSeen || from.unlockSeen };
 }
 
+/** يدمج دفتر الخادم (من جهاز آخر) مع الدفتر المحلي: لكل حقل النص الأطول. */
+export function mergeJournal(p: Progress, journal: Student['journal']): Progress {
+  if (!journal) return p;
+  const from: Progress = {
+    tasks: {},
+    notebook: journal.notebook && typeof journal.notebook === 'object' ? journal.notebook : {},
+    conclusions: journal.conclusions && typeof journal.conclusions === 'object' ? journal.conclusions : {},
+    epoch: 0,
+  };
+  return { ...mergeProgress(p, from), epoch: p.epoch };
+}
+
 /**
  * يحدّث التقدّم المحلي بما يعرفه الخادم.
  * إذا صفّرت المعلمة النقاط (epoch أكبر) تُمسح المهام المحلية القديمة أولاً.
