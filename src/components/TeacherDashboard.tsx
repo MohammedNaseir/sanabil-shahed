@@ -212,15 +212,6 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onClose, onR
     onRefreshData?.();
   };
 
-  const handleToggleElements = async () => {
-    if (!token || !session) return;
-    sounds.click();
-    setIsUpdatingSession(true);
-    await teacherAction('/api/teacher/session', { elementsUnlocked: !session.elementsUnlocked });
-    setIsUpdatingSession(false);
-    onRefreshData?.();
-  };
-
   const handleSaveAnnouncement = async () => {
     if (!token) return;
     sounds.correct();
@@ -695,22 +686,6 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onClose, onR
                     >
                       <Power className="w-4 h-4" />
                       <span>{session?.isOpen ? 'إغلاق المختبر الآن' : 'فتح المختبر لاستقبال الطلاب'}</span>
-                    </button>
-                  </div>
-
-                  {/* فتح مختبر العناصر للصف كله */}
-                  <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-3">
-                    <h5 className="text-sm font-black text-white">مختبر العناصر (المرحلة الثانية)</h5>
-                    <p className="text-xs text-slate-400">
-                      يُفتح تلقائياً لكل طالب بعد إنجاز «مختبر التحقيق النهائي» في مختبر الذرة. يمكنكِ فتحه الآن لكل الصف (مثلاً لبدء حصة الكالسيوم مباشرة).
-                    </p>
-                    <button
-                      type="button"
-                      onClick={handleToggleElements}
-                      disabled={isUpdatingSession}
-                      className={`px-4 py-2.5 rounded-xl font-black text-xs transition-all ${session?.elementsUnlocked ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'}`}
-                    >
-                      {session?.elementsUnlocked ? 'إعادة القفل (يُفتح بعد مختبر الذرة)' : 'فتح مختبر العناصر للجميع'}
                     </button>
                   </div>
 

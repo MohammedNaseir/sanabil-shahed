@@ -4,7 +4,9 @@
  *
  * الصيغ:
  *   #/                  شاشة الاستقبال
- *   #/labs              اختيار المختبر
+ *   #/labs              اختيار القسم (مختبرات الأسئلة أو مختبرات المراجعة)
+ *   #/questions         قسم مختبرات الأسئلة
+ *   #/review            قسم مختبرات المراجعة (الذرة والعناصر)
  *   #/atom              مختبر الذرة
  *   #/atom/1 … #/atom/6 بوابة من بوابات الذرة
  *   #/elements          مختبر العناصر
@@ -16,7 +18,7 @@ export const ELEMENT_IDS = ['ca', 'su', 'si'] as const;
 export type ElementId = typeof ELEMENT_IDS[number];
 export const ATOM_GATE_COUNT = 6;
 
-export type ViewName = 'reception' | 'lab_selection' | 'atom_hub' | 'atom_gate' | 'elements_hub' | 'element_lab' | 'finale';
+export type ViewName = 'reception' | 'lab_selection' | 'questions' | 'review' | 'atom_hub' | 'atom_gate' | 'elements_hub' | 'element_lab' | 'finale';
 
 export interface Route {
   view: ViewName;
@@ -39,6 +41,10 @@ export function parseHash(hash: string): { route: Route; valid: boolean } {
       return ok(HOME_ROUTE);
     case 'labs':
       return second ? bad(r('lab_selection')) : ok(r('lab_selection'));
+    case 'questions':
+      return second ? bad(r('questions')) : ok(r('questions'));
+    case 'review':
+      return second ? bad(r('review')) : ok(r('review'));
     case 'finale':
       return second ? bad(r('finale')) : ok(r('finale'));
     case 'atom': {
@@ -60,6 +66,8 @@ export function formatHash(route: Route): string {
   switch (route.view) {
     case 'reception': return '#/';
     case 'lab_selection': return '#/labs';
+    case 'questions': return '#/questions';
+    case 'review': return '#/review';
     case 'finale': return '#/finale';
     case 'atom_hub': return '#/atom';
     case 'atom_gate': return route.gate != null ? `#/atom/${route.gate + 1}` : '#/atom';

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import {
   Trophy, ShieldCheck, Atom, Share2, BookOpen, FlaskConical, Volume2, VolumeX,
-  Cloud, CloudOff, CloudUpload, Clock, WifiOff, AlertCircle, LayoutGrid, MoreHorizontal, UserRound, X,
+  Cloud, CloudOff, CloudUpload, Clock, WifiOff, AlertCircle, LayoutGrid, MoreHorizontal, UserRound, X, HelpCircle, Medal,
 } from 'lucide-react';
 import { Student, LabSession } from '../types';
 import type { SyncState } from '../utils/scoreQueue';
 import { ThemeToggle } from './ThemeToggle';
 import { useDialog } from '../utils/useDialog';
+import { SanabilLogo } from './home/SanabilLogo';
 
 interface NavbarProps {
   currentStudent: Student | null;
@@ -17,6 +18,8 @@ interface NavbarProps {
   onToggleSound: () => void;
   onNavigateHome: () => void;
   onNavigateSelection: () => void;
+  onNavigateQuestions: () => void;
+  onNavigateReview: () => void;
   onNavigateAtom: () => void;
   onNavigateElements: () => void;
   onOpenNotebook: () => void;
@@ -39,6 +42,8 @@ const SYNC_LABELS: Record<SyncState, { text: string; cls: string; Icon: React.FC
 function useActive(currentView: string) {
   return {
     selection: currentView === 'lab_selection' || currentView === 'finale',
+    questions: currentView === 'questions',
+    review: currentView === 'review',
     atom: currentView === 'atom_hub' || currentView === 'atom_gate',
     elements: currentView === 'elements_hub' || currentView === 'element_lab',
   };
@@ -119,12 +124,14 @@ const MoreSheet: React.FC<NavbarProps & { onClose: () => void }> = (props) => {
   };
   const sync = props.syncState ? SYNC_LABELS[props.syncState] : null;
   const items: { label: string; Icon: React.FC<{ className?: string }>; onClick: () => void }[] = [
+    { label: 'مختبرات الأسئلة', Icon: HelpCircle, onClick: run(props.onNavigateQuestions) },
+    { label: 'مختبرات المراجعة', Icon: Medal, onClick: run(props.onNavigateReview) },
     { label: 'دفتر الباحث', Icon: BookOpen, onClick: run(props.onOpenNotebook) },
     { label: 'مشاركة رابط المختبر', Icon: Share2, onClick: run(props.onOpenShare) },
     { label: 'لوحة المعلمة', Icon: ShieldCheck, onClick: run(props.onOpenTeacher) },
   ];
   return (
-    <div className="fixed inset-0 z-[55] md:hidden" dir="rtl">
+    <div className="navy-shell fixed inset-0 z-[55] md:hidden" dir="rtl">
       <button type="button" aria-label="إغلاق القائمة" onClick={props.onClose} className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" />
       <div {...dialogProps} className="absolute inset-x-0 bottom-0 rounded-t-[28px] bg-slate-900 border-t hairline p-5 pb-safe animate-in focus:outline-none">
         <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-slate-700" aria-hidden="true" />
@@ -166,25 +173,27 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
   const sync = syncState ? SYNC_LABELS[syncState] : null;
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-950/85 backdrop-blur-xl border-b hairline" dir="rtl">
+    <header className="navy-shell sticky top-0 z-40 bg-slate-950/90 backdrop-blur-xl border-b hairline" dir="rtl">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:right-2 focus:z-50 focus:px-3 focus:py-2 focus:rounded-lg focus:bg-amber-400 focus:text-slate-950 focus:font-bold">
         تخطَّ إلى المحتوى
       </a>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
 
-        <button type="button" onClick={props.onNavigateHome} className="flex items-center gap-3 shrink-0" aria-label="الرئيسية — مختبرات صقور الكيمياء">
-          <img src="/sanabil-logo.png" alt="" className="h-9 w-auto object-contain" />
-          <span className="hidden sm:block text-right leading-tight" aria-hidden="true">
-            <span className="block font-display text-[15px] text-white">صقور الكيمياء</span>
-            <span className="block text-[11px] text-slate-500">إشراف أ. شهد نصير</span>
+        <button type="button" onClick={props.onNavigateHome} className="flex items-center gap-2.5 shrink-0" aria-label="الواجهة الرئيسية — منصة سنابل التعليمية">
+          <SanabilLogo />
+          <span className="text-right leading-tight" aria-hidden="true">
+            <span className="block font-display text-[14px] sm:text-[15px] text-white">منصة سنابل التعليمية</span>
+            <span className="block text-[11px] text-slate-300">أ. شهد نصير</span>
           </span>
         </button>
 
-        <nav aria-label="التنقل بين المختبرات" className="hidden md:flex items-stretch gap-4 lg:gap-6 h-full">
+        <nav aria-label="التنقل بين المختبرات" className="hidden md:flex items-stretch gap-3.5 lg:gap-5 h-full">
           <TopLink active={active.selection} onClick={props.onNavigateSelection}>المختبرات</TopLink>
-          <TopLink active={active.atom} onClick={props.onNavigateAtom}>مختبر الذرة</TopLink>
-          <TopLink active={active.elements} onClick={props.onNavigateElements}>مختبر العناصر</TopLink>
-          <span className="hidden lg:contents">
+          <TopLink active={active.questions} onClick={props.onNavigateQuestions}>الأسئلة</TopLink>
+          <TopLink active={active.review} onClick={props.onNavigateReview}>المراجعة</TopLink>
+          <TopLink active={active.atom} onClick={props.onNavigateAtom}>الذرة</TopLink>
+          <TopLink active={active.elements} onClick={props.onNavigateElements}>العناصر</TopLink>
+          <span className="hidden xl:contents">
             <TopLink onClick={props.onOpenLeaderboard}>لوحة الشرف</TopLink>
             <TopLink onClick={props.onOpenNotebook}>دفتر الباحث</TopLink>
           </span>
@@ -201,7 +210,8 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
               {sync.text}
             </span>
           )}
-          <ThemeToggle />
+          {/* الوضع الفاتح/الداكن يخصّ صفحات المختبرات؛ الواجهات الخارجية كحلية دائماً */}
+          {!['lab_selection', 'questions', 'review'].includes(currentView) && <ThemeToggle />}
           <div className="hidden md:flex items-center gap-2">
             <IconButton
               label={soundOn ? 'إيقاف المؤثرات الصوتية' : 'تشغيل المؤثرات الصوتية'}
@@ -210,7 +220,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
             >
               {soundOn ? <Volume2 className="w-4 h-4" aria-hidden="true" /> : <VolumeX className="w-4 h-4" aria-hidden="true" />}
             </IconButton>
-            <IconButton label="لوحة الشرف" onClick={props.onOpenLeaderboard} className="lg:hidden">
+            <IconButton label="لوحة الشرف" onClick={props.onOpenLeaderboard} className="xl:hidden">
               <Trophy className="w-4 h-4" aria-hidden="true" />
             </IconButton>
             <IconButton label="مشاركة رابط المختبر مع الطلاب" onClick={props.onOpenShare}>
@@ -235,7 +245,7 @@ export const MobileTabBar: React.FC<NavbarProps> = (props) => {
   const student = props.currentStudent;
 
   const tabs = [
-    { key: 'labs', label: 'المختبرات', Icon: LayoutGrid, onClick: props.onNavigateSelection, active: active.selection },
+    { key: 'labs', label: 'المختبرات', Icon: LayoutGrid, onClick: props.onNavigateSelection, active: active.selection || active.questions || active.review },
     { key: 'atom', label: 'الذرة', Icon: Atom, onClick: props.onNavigateAtom, active: active.atom },
     { key: 'el', label: 'العناصر', Icon: FlaskConical, onClick: props.onNavigateElements, active: active.elements },
     { key: 'board', label: 'الشرف', Icon: Trophy, onClick: props.onOpenLeaderboard, active: false },
@@ -251,7 +261,7 @@ export const MobileTabBar: React.FC<NavbarProps> = (props) => {
 
   return (
     <>
-      <nav aria-label="التنقل الرئيسي" className="md:hidden fixed inset-x-0 bottom-0 z-40 bg-slate-950/92 backdrop-blur-xl border-t hairline pb-safe" dir="rtl">
+      <nav aria-label="التنقل الرئيسي" className="navy-shell md:hidden fixed inset-x-0 bottom-0 z-40 bg-slate-950/95 backdrop-blur-xl border-t hairline pb-safe" dir="rtl">
         <ul className="grid grid-cols-6 max-w-lg mx-auto">
           {tabs.map(({ key, label, Icon, onClick, active: isActive, badge }) => (
             <li key={key}>

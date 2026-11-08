@@ -14,7 +14,8 @@ import { ChemicalIdCard } from './components/ChemicalIdCard';
 import { StudentRegisterModal } from './components/StudentRegisterModal';
 import { AtelierBackdrop } from './components/home/AtelierBackdrop';
 import { ReceptionScreen } from './components/home/ReceptionScreen';
-import { LabSelectionScreen } from './components/home/LabSelectionScreen';
+import { SectionsScreen, QuestionsSection, ReviewSection } from './components/home/Sections';
+import { ChemBackdrop } from './components/home/ChemBackdrop';
 import { LazyBoundary, LoadingPanel } from './components/LazyBoundary';
 import { NoticeToast, type Notice } from './components/NoticeToast';
 
@@ -28,7 +29,7 @@ import {
   mergeJournal, mergeProgress, removeProgress, saveProgress, saveStudent, saveStudentKey,
 } from './utils/studentStore';
 import { type SyncState, clearQueue, enqueueTask, flushQueue, loadQueue } from './utils/scoreQueue';
-import { TASK_POINTS, isTaskId, labTotals, atomFinalDone, ATOM_TASK_COUNT, ELEMENT_STATION_COUNT, elementStationsDone, type LabId } from './content/tasks';
+import { TASK_POINTS, isTaskId, labTotals, ATOM_TASK_COUNT, ELEMENT_STATION_COUNT, elementStationsDone, type LabId } from './content/tasks';
 import { LabContext, type LabRuntime, type NoteKind } from './engine/shared';
 
 // تحميل كسول: كل مختبر ونافذة كبيرة يُحمَّل عند فتحه فقط
@@ -37,7 +38,6 @@ const AtomGatePage = lazy(() => import('./labs/AtomGate').then(m => ({ default: 
 const ElementsHub = lazy(() => import('./labs/Elements').then(m => ({ default: m.ElementsHub })));
 const ElementLabPage = lazy(() => import('./labs/Elements').then(m => ({ default: m.ElementLabPage })));
 const Finale = lazy(() => import('./labs/Elements').then(m => ({ default: m.Finale })));
-const UnlockFx = lazy(() => import('./labs/Elements').then(m => ({ default: m.UnlockFx })));
 const TeacherDashboard = lazy(() => import('./components/TeacherDashboard').then(m => ({ default: m.TeacherDashboard })));
 const LeaderboardModal = lazy(() => import('./components/LeaderboardModal').then(m => ({ default: m.LeaderboardModal })));
 const ShareLabModal = lazy(() => import('./components/ShareLabModal').then(m => ({ default: m.ShareLabModal })));
@@ -87,6 +87,8 @@ export default function App() {
   const go = useMemo(() => ({
     reception: () => navigate(HOME_ROUTE),
     labs: () => navigate({ view: 'lab_selection', gate: null, lab: null }),
+    questions: () => navigate({ view: 'questions', gate: null, lab: null }),
+    review: () => navigate({ view: 'review', gate: null, lab: null }),
     atom: () => navigate({ view: 'atom_hub', gate: null, lab: null }),
     gate: (g: number) => navigate({ view: 'atom_gate', gate: g, lab: null }),
     elements: () => navigate({ view: 'elements_hub', gate: null, lab: null }),
@@ -317,20 +319,7 @@ export default function App() {
 
   const labRuntime: LabRuntime = useMemo(() => ({ tasks: progress.tasks, award, note, conclude }), [progress.tasks, award, note, conclude]);
 
-  // =================== فتح مختبر العناصر ===================
-  const atomDone = atomFinalDone(progress.tasks);
-  const elementsUnlocked = atomDone || Boolean(session?.elementsUnlocked);
-  const [showUnlock, setShowUnlock] = useState(false);
-  useEffect(() => {
-    if (!atomDone || progress.unlockSeen || showUnlock) return;
-    const t = setTimeout(() => setShowUnlock(true), 1500);
-    return () => clearTimeout(t);
-  }, [atomDone, progress.unlockSeen, showUnlock]);
-  const closeUnlock = () => {
-    updateProgress(p => ({ ...p, unlockSeen: true }));
-    setShowUnlock(false);
-    go.elements();
-  };
+  // كل المختبرات مفتوحة دائماً: التنقّل حرّ دون تسلسل إجباري بين الذرة والعناصر.
 
   // =================== التسجيل وتبديل الطالب ===================
 
@@ -412,6 +401,8 @@ export default function App() {
   const atomAttempted = Object.keys(progress.tasks).filter(t => t.startsWith('at.')).length;
   const elDone = elementStationsDone(progress.tasks);
 
+  const isSectionView = currentView === 'lab_selection' || currentView === 'questions' || currentView === 'review';
+
   const notebookLab: LabId = route.view === 'element_lab' && route.lab ? route.lab : 'at';
 
   const navProps = {
@@ -423,6 +414,8 @@ export default function App() {
     onToggleSound: toggleSound,
     onNavigateHome: () => { sounds.click(); go.reception(); },
     onNavigateSelection: () => { sounds.click(); go.labs(); },
+    onNavigateQuestions: () => { sounds.click(); go.questions(); },
+    onNavigateReview: () => { sounds.click(); go.review(); },
     onNavigateAtom: () => { sounds.click(); go.atom(); },
     onNavigateElements: () => { sounds.click(); go.elements(); },
     onOpenNotebook: () => setIsNotebookOpen(true),
@@ -440,27 +433,35 @@ export default function App() {
 
   return (
     <LabContext.Provider value={labRuntime}>
-    <div className="min-h-[100svh] text-slate-100 flex flex-col selection:bg-amber-400 selection:text-slate-950 relative overflow-x-hidden font-sans">
+    <div className="min-h-[100svh] text-slate-100 flex flex-col selection:bg-amber-400 selection:text-slate-950 relative overflow-x-clip font-sans">
 
       {currentView === 'reception' && (
         <ReceptionScreen onEnterLab={() => { sounds.click(); go.labs(); }} />
       )}
 
-      {currentView === 'lab_selection' && (
-        <LabSelectionScreen
-          onSelectAtomLab={() => go.atom()}
-          onSelectElementsLab={() => go.elements()}
-          elementsUnlocked={elementsUnlocked}
-          atomProgress={`${atomAttempted} / ${ATOM_TASK_COUNT} نشاطًا · ${totals.at} نقطة`}
-          elementsProgress={`${elDone} / ${ELEMENT_STATION_COUNT} مهمة · ${totals.ca + totals.su + totals.si} نقطة`}
-          onBackToReception={() => { sounds.click(); go.reception(); }}
-          studentPoints={totals.total}
-          studentName={currentStudent?.fullName}
-          chemicalId={currentStudent?.chemicalId}
-        />
+      {isSectionView && (
+        <div className="navy-shell relative flex-1 flex flex-col">
+          <ChemBackdrop />
+          <Navbar {...navProps} />
+          <MobileTabBar {...navProps} />
+          <main id="main" className="relative z-10 flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-28 md:py-8">
+            {currentView === 'lab_selection' && <SectionsScreen onQuestions={go.questions} onReview={go.review} />}
+            {currentView === 'questions' && <QuestionsSection onSections={go.labs} onReview={go.review} />}
+            {currentView === 'review' && (
+              <ReviewSection
+                atomProgress={`${atomAttempted} / ${ATOM_TASK_COUNT} نشاطًا · ${totals.at} نقطة`}
+                elementsProgress={`${elDone} / ${ELEMENT_STATION_COUNT} مهمة · ${totals.ca + totals.su + totals.si} نقطة`}
+                onAtom={go.atom}
+                onElements={go.elements}
+                onSections={go.labs}
+                onQuestions={go.questions}
+              />
+            )}
+          </main>
+        </div>
       )}
 
-      {currentView !== 'reception' && currentView !== 'lab_selection' && (
+      {currentView !== 'reception' && !isSectionView && (
         <>
           <AtelierBackdrop />
           <Navbar {...navProps} />
@@ -498,12 +499,10 @@ export default function App() {
                   <AtomGatePage key={route.gate} gateIndex={route.gate} onBack={() => go.atom()} onToast={m => setNotice({ tone: 'info', text: m })} />
                 )}
                 {currentView === 'elements_hub' && (
-                  <ElementsHub tasks={progress.tasks} unlocked={elementsUnlocked} onOpenLab={id => go.lab(id)} onBackToAtom={() => go.atom()} onFinale={() => go.finale()} />
+                  <ElementsHub tasks={progress.tasks} unlocked onOpenLab={id => go.lab(id)} onBackToAtom={() => go.atom()} onFinale={() => go.finale()} />
                 )}
                 {currentView === 'element_lab' && route.lab && (
-                  elementsUnlocked
-                    ? <ElementLabPage key={route.lab} labId={route.lab} conclusions={progress.conclusions[route.lab] || {}} onBack={() => go.elements()} onFinale={() => go.finale()} />
-                    : <ElementsHub tasks={progress.tasks} unlocked={false} onOpenLab={() => {}} onBackToAtom={() => go.atom()} onFinale={() => {}} />
+                  <ElementLabPage key={route.lab} labId={route.lab} conclusions={progress.conclusions[route.lab] || {}} onBack={() => go.elements()} onFinale={() => go.finale()} />
                 )}
                 {currentView === 'finale' && <Finale tasks={progress.tasks} onBack={() => go.labs()} onCertificate={() => setIsCertOpen(true)} />}
               </Suspense>
@@ -515,7 +514,6 @@ export default function App() {
       {/* --- النوافذ المنبثقة (تُحمَّل عند فتحها فقط) --- */}
       <LazyBoundary>
         <Suspense fallback={null}>
-          {showUnlock && <UnlockFx onDone={closeUnlock} />}
           {isCertOpen && <CertificateModal student={certificateStudent} onClose={() => setIsCertOpen(false)} />}
           {isNotebookOpen && (
             <NotebookModal

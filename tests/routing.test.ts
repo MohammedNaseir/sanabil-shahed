@@ -6,6 +6,8 @@ test('كل مسار صالح يتحول إلى hash ويعود كما هو', () 
   const routes: Route[] = [
     HOME_ROUTE,
     { view: 'lab_selection', gate: null, lab: null },
+    { view: 'questions', gate: null, lab: null },
+    { view: 'review', gate: null, lab: null },
     { view: 'atom_hub', gate: null, lab: null },
     { view: 'atom_gate', gate: 0, lab: null },
     { view: 'atom_gate', gate: 5, lab: null },
@@ -20,6 +22,8 @@ test('كل مسار صالح يتحول إلى hash ويعود كما هو', () 
     assert.deepEqual(route, r);
   }
   assert.equal(formatHash({ view: 'atom_gate', gate: 2, lab: null }), '#/atom/3', 'أرقام البوابات تبدأ من 1 في الرابط');
+  assert.equal(formatHash({ view: 'review', gate: null, lab: null }), '#/review');
+  assert.equal(formatHash({ view: 'questions', gate: null, lab: null }), '#/questions');
 });
 
 test('الروابط غير الصالحة تعود لمكان آمن', () => {
