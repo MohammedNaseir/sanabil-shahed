@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Trophy, ShieldCheck, Atom, Share2, BookOpen, FlaskConical, Volume2, VolumeX,
+  Trophy, ShieldCheck, Atom, BookOpen, FlaskConical, Volume2, VolumeX,
   Cloud, CloudOff, CloudUpload, Clock, WifiOff, AlertCircle, LayoutGrid, MoreHorizontal, UserRound, X, HelpCircle, Medal,
 } from 'lucide-react';
 import { Student, LabSession } from '../types';
@@ -27,7 +27,6 @@ interface NavbarProps {
   onOpenRegister: () => void;
   onOpenLeaderboard: () => void;
   onOpenTeacher: () => void;
-  onOpenShare: () => void;
 }
 
 const SYNC_LABELS: Record<SyncState, { text: string; cls: string; Icon: React.FC<{ className?: string }> }> = {
@@ -127,7 +126,6 @@ const MoreSheet: React.FC<NavbarProps & { onClose: () => void }> = (props) => {
     { label: 'مختبرات الأسئلة', Icon: HelpCircle, onClick: run(props.onNavigateQuestions) },
     { label: 'مختبرات المراجعة', Icon: Medal, onClick: run(props.onNavigateReview) },
     { label: 'دفتر الباحث', Icon: BookOpen, onClick: run(props.onOpenNotebook) },
-    { label: 'مشاركة رابط المختبر', Icon: Share2, onClick: run(props.onOpenShare) },
     { label: 'لوحة المعلمة', Icon: ShieldCheck, onClick: run(props.onOpenTeacher) },
   ];
   return (
@@ -222,9 +220,6 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
             </IconButton>
             <IconButton label="لوحة الشرف" onClick={props.onOpenLeaderboard} className="xl:hidden">
               <Trophy className="w-4 h-4" aria-hidden="true" />
-            </IconButton>
-            <IconButton label="مشاركة رابط المختبر مع الطلاب" onClick={props.onOpenShare}>
-              <Share2 className="w-4 h-4" aria-hidden="true" />
             </IconButton>
             <IconButton label="لوحة تحكم المعلمة" onClick={props.onOpenTeacher}>
               <ShieldCheck className="w-4 h-4" aria-hidden="true" />

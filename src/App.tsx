@@ -40,7 +40,6 @@ const ElementLabPage = lazy(() => import('./labs/Elements').then(m => ({ default
 const Finale = lazy(() => import('./labs/Elements').then(m => ({ default: m.Finale })));
 const TeacherDashboard = lazy(() => import('./components/TeacherDashboard').then(m => ({ default: m.TeacherDashboard })));
 const LeaderboardModal = lazy(() => import('./components/LeaderboardModal').then(m => ({ default: m.LeaderboardModal })));
-const ShareLabModal = lazy(() => import('./components/ShareLabModal').then(m => ({ default: m.ShareLabModal })));
 const CertificateModal = lazy(() => import('./components/ChemistryCertificateModal').then(m => ({ default: m.ChemistryCertificateModal })));
 const NotebookModal = lazy(() => import('./components/Notebook').then(m => ({ default: m.NotebookModal })));
 
@@ -328,7 +327,6 @@ export default function App() {
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   const [isTeacherOpen, setIsTeacherOpen] = useState(false);
   const [isCertOpen, setIsCertOpen] = useState(false);
-  const [isShareOpen, setIsShareOpen] = useState(false);
   const [isNotebookOpen, setIsNotebookOpen] = useState(false);
 
   const handleRegistered = (student: Student, key: string | null) => {
@@ -423,7 +421,6 @@ export default function App() {
     onOpenRegister: () => setIsRegisterOpen(true),
     onOpenLeaderboard: () => setIsLeaderboardOpen(true),
     onOpenTeacher: () => setIsTeacherOpen(true),
-    onOpenShare: () => setIsShareOpen(true),
   };
 
   const certificateStudent: Student = displayStudent || {
@@ -526,7 +523,6 @@ export default function App() {
           )}
           {isLeaderboardOpen && <LeaderboardModal onClose={() => setIsLeaderboardOpen(false)} currentStudentId={currentStudent?.id} />}
           {isTeacherOpen && <TeacherDashboard onClose={() => setIsTeacherOpen(false)} onRefreshData={fetchSessionData} />}
-          {isShareOpen && <ShareLabModal onClose={() => setIsShareOpen(false)} />}
         </Suspense>
       </LazyBoundary>
 

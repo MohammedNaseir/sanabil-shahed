@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDialog } from '../utils/useDialog';
-import { X, Share2, Copy, Check, MessageSquare, CheckCircle2, Globe, ExternalLink, ShieldCheck } from 'lucide-react';
+import { X, Share2, Copy, Check, MessageSquare, CheckCircle2, Globe, ExternalLink } from 'lucide-react';
 import { sounds } from '../utils/audio';
 
 interface ShareLabModalProps {
@@ -29,18 +29,18 @@ export const ShareLabModal: React.FC<ShareLabModalProps> = ({ onClose }) => {
     }
   };
 
-  const studentInviteMessage = `🦅 مختبر الأسئلة الكيميائي | صقور أ. شهد في منصة سنابل 🦅
+  const studentInviteMessage = `🦅 مختبرات صقور الكيمياء | منصة سنابل التعليمية 🦅
 أعزائي طلبة الصف العاشر الأبطال،
-ندعوكم لخوض غمار التحدي في مختبر الكيمياء التفاعلي لدرس «السيليكون ومركباته»:
+ندعوكم لخوض التحدي في مختبرات الكيمياء التفاعلية مع أ. شهد نصير:
 
-🔗 رابط الدخول المباشر للمختبر:
+🔗 رابط الدخول المباشر:
 ${publicAppUrl}
 
 🧪 خطوات الانضمام:
-1️⃣ افتح الرابط أعلاه من أي هاتف أو حاسوب.
-2️⃣ اضغط على «هويتي الكيميائية» وسجّل اسمك الثلاثي واختر رقماً سرياً تتذكره.
-3️⃣ انطلق في المحطات الست (صقر الصيد، شفرة الاكتشاف، قوارير المحاليل، فرن الصهر، المحقق الكيميائي، كبسولة الإنقاذ).
-4️⃣ اجمع نقاطك واطبع شهادة التكريم المعتمدة من أ. شهد ومنصة سنابل التعليمية! 🌟`;
+1️⃣ افتح الرابط من أي هاتف أو حاسوب.
+2️⃣ اضغط «الدخول إلى المختبر» واختر مختبرات المراجعة أو مختبرات الأسئلة.
+3️⃣ سجّل اسمك الثلاثي واختر رقماً سرياً تتذكره لتُحفظ نقاطك ودفترك.
+4️⃣ انطلق في مختبر الذرة ومختبر العناصر، واجمع نقاطك واحصل على شهادتك! 🌟`;
 
   const handleCopyMessage = async () => {
     sounds.correct();
@@ -125,35 +125,6 @@ ${publicAppUrl}
           <p className="text-[11px] text-slate-300 leading-relaxed">
             هذا هو الرابط العام الذي يُرسل للطلبة مباشرة للدخول على المختبر وخوض التحديات.
           </p>
-        </div>
-
-        {/* How to activate sharing if Google shows restricted / 403 / 404 */}
-        <div className="p-4 rounded-2xl bg-slate-950/80 border border-blue-500/30 space-y-3">
-          <div className="flex items-center gap-2 text-blue-300 font-bold text-xs">
-            <ShieldCheck className="w-4 h-4 text-blue-400 shrink-0" />
-            <span>خطوة تفعيل الرابط العام ليفتح عند جميع الطلبة بدون أي خطأ:</span>
-          </div>
-          
-          <div className="space-y-2 text-xs text-slate-300 leading-relaxed">
-            <div className="flex items-start gap-2.5">
-              <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-300 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 border border-blue-400/30">1</span>
-              <span>
-                في أعلى شاشة الموقع هذه تماماً، انظري إلى <strong>الشريط العلوي الخارجي لـ Google AI Studio</strong> (فوق نافذة المعاينة في الزاوية العلوية).
-              </span>
-            </div>
-            <div className="flex items-start gap-2.5">
-              <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-300 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 border border-blue-400/30">2</span>
-              <span>
-                اضغطي على زر <strong>Share (مشاركة)</strong> الأزرق/الأبيض.
-              </span>
-            </div>
-            <div className="flex items-start gap-2.5">
-              <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-300 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 border border-blue-400/30">3</span>
-              <span>
-                تأكدي من تفعيل خيار <strong>Anyone with the link (أي شخص لديه الرابط)</strong> لكي يفتح فوراً لجميع الهواتف والأجهزة دون طلب تسجيل دخول جوجل.
-              </span>
-            </div>
-          </div>
         </div>
 
         {/* WhatsApp / Invitation Template with Link */}

@@ -260,6 +260,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onClose, onR
           </div>
 
           <div className="flex items-center gap-2">
+            {token && (
             <button
               onClick={() => {
                 sounds.click();
@@ -271,6 +272,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onClose, onR
               <Share2 className="w-3.5 h-3.5" />
               <span>مشاركة الرابط</span>
             </button>
+            )}
             {token && (
               <button
                 onClick={handleLogout}
@@ -746,7 +748,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onClose, onR
         )}
 
         {/* Share Lab Link Modal */}
-        {isShareModalOpen && (
+        {token && isShareModalOpen && (
           <ShareLabModal
             onClose={() => setIsShareModalOpen(false)}
           />
