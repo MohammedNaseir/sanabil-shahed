@@ -3,8 +3,10 @@
  * المصدر: مختبرات الكالسيوم والكبريت والسيليكون
  */
 import type { ElementLab } from './types';
+import { withWheel } from './wheel';
 
-export const ELEMENT_LABS: ElementLab[] = [
+/** محتوى v5 كما هو؛ ELEMENT_LABS تضيف إليه محطة «عجلة الصقور» أولاً (src/content/wheel.ts). */
+export const V5_ELEMENT_LABS: ElementLab[] = [
   {
     "id": "ca",
     "n": "مختبر الكالسيوم",
@@ -1545,3 +1547,5 @@ export const ELEMENT_LABS: ElementLab[] = [
     ]
   }
 ];
+
+export const ELEMENT_LABS: ElementLab[] = withWheel(V5_ELEMENT_LABS);

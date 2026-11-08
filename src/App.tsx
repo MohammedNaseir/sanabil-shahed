@@ -45,7 +45,7 @@ const NotebookModal = lazy(() => import('./components/Notebook').then(m => ({ de
 
 const DEFAULT_SESSION: LabSession = {
   isOpen: true,
-  announcement: 'مرحبًا بكم يا صقور الكيمياء! اليوم مراجعة على شكل ألعاب وتحديات: نراجع فصل الذرة والعناصر ونجمع النقاط.',
+  announcement: 'مرحبًا بكم يا صقور الكيمياء في منصة سنابل التعليمية، في مختبر أ. شهد نصير!\nهنا تبدأ التحديات، ونخوض الأسئلة، ونختبر معلوماتنا وتفكيرنا الكيميائي بكل حماس! 🦅💙',
   lessonName: 'مراجعة فصل الذرة والعناصر — الكيمياء الصف العاشر',
   teacherName: 'أ. شهد',
   organization: 'منصة سنابل التعليمية',
@@ -482,7 +482,7 @@ export default function App() {
 
             {session?.announcement && (currentView === 'atom_hub' || currentView === 'elements_hub') && (
               <aside className="flex items-start gap-4 border-s-2 border-amber-400 ps-4 py-1 animate-in" aria-label="توجيه المعلمة">
-                <p className="text-[15px] leading-relaxed text-slate-300">
+                <p className="text-[15px] leading-relaxed text-slate-300 whitespace-pre-line">
                   <span className="font-display text-amber-300 me-2">توجيه أ. شهد</span>
                   {session.announcement}
                 </p>

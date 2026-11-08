@@ -5,6 +5,7 @@
 import { ATOM_GATES } from './atom';
 import { ELEMENT_LABS } from './elements';
 import type { ElementStation, Item } from './types';
+import { WHEEL_POINTS } from './wheel';
 
 const itemPoints = (it: Item) => it.p ?? 1;
 
@@ -20,6 +21,8 @@ export function stationTasks(labId: string, s: ElementStation): [string, number]
       return s.sim.post.map((it, k) => [`${pre}.${k}`, itemPoints(it)]);
     case 'elec':
       return s.elec.post.map((it, k) => [`${pre}.${k}`, itemPoints(it)]);
+    case 'wheel':
+      return s.wheel.map((_, k): [string, number] => [`${pre}.${k}`, WHEEL_POINTS]);
     case 'micro':
       return [[`${pre}.0`, 1], ...s.micro.post.map((it, k): [string, number] => [`${labId}.s1m.${k}`, itemPoints(it)])];
   }

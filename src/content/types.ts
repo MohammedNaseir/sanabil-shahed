@@ -118,6 +118,16 @@ export interface ArcadeDef {
   items: McqItem[];
 }
 
+/** سؤال «عجلة الصقور»: ثلاثة خيارات، الأول هو الصحيح (تُخلط عند العرض). */
+export interface WheelQuestion {
+  emoji: string;
+  topic: string;
+  q: string;
+  o: [string, string, string];
+  h: string;
+  e: string;
+}
+
 interface StationBase {
   id: string;
   n: string;
@@ -130,7 +140,8 @@ export type ElementStation =
   | (StationBase & { kind: 'elec'; elec: ElecDef })
   | (StationBase & { kind: 'micro'; micro: MicroDef })
   | (StationBase & { kind: 'quiz'; items: Item[] })
-  | (StationBase & { kind: 'arcade'; arcade: ArcadeDef });
+  | (StationBase & { kind: 'arcade'; arcade: ArcadeDef })
+  | (StationBase & { kind: 'wheel'; wheel: WheelQuestion[] });
 
 export interface ElementLab {
   id: 'ca' | 'su' | 'si';

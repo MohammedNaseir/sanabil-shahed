@@ -97,7 +97,7 @@ const header = src => `/**\n * ⚠️ ملف مولَّد من lab_shahd_v5.html
 fs.writeFileSync(path.join(outDir, 'atom.ts'),
   header('بوابات مختبر الذرة الست') + `import type { AtomGate } from './types';\n\nexport const ATOM_GATES: AtomGate[] = ${JSON.stringify(gates, null, 2)};\n`);
 fs.writeFileSync(path.join(outDir, 'elements.ts'),
-  header('مختبرات الكالسيوم والكبريت والسيليكون') + `import type { ElementLab } from './types';\n\nexport const ELEMENT_LABS: ElementLab[] = ${JSON.stringify(labs, null, 2)};\n`);
+  header('مختبرات الكالسيوم والكبريت والسيليكون') + `import type { ElementLab } from './types';\nimport { withWheel } from './wheel';\n\n/** محتوى v5 كما هو؛ ELEMENT_LABS تضيف إليه محطة «عجلة الصقور» أولاً (src/content/wheel.ts). */\nexport const V5_ELEMENT_LABS: ElementLab[] = ${JSON.stringify(labs, null, 2)};\n\nexport const ELEMENT_LABS: ElementLab[] = withWheel(V5_ELEMENT_LABS);\n`);
 
 // إحصاءات للتحقق
 const sum = a => a.reduce((x, y) => x + y, 0);

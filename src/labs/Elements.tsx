@@ -1,5 +1,5 @@
 /**
- * مختبر العناصر: الكالسيوم والكبريت والسيليكون — 7 محطات لكل عنصر (تجربتان وخمس ألعاب).
+ * مختبر العناصر: الكالسيوم والكبريت والسيليكون — «عجلة الصقور» أولاً، ثم محطات v5 السبع (تجربتان وخمس ألعاب).
  */
 import React, { useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Lock } from 'lucide-react';
@@ -9,6 +9,7 @@ import { ATOM_GATES } from '../content/atom';
 import { LAB_NAMES, labTotals, rankTitle, stationDoneId, elementLabDone, atomFinalDone } from '../content/tasks';
 import { QuizSequence } from '../engine/ItemCard';
 import { Arcade } from '../engine/Arcade';
+import { FalconWheel } from '../engine/FalconWheel';
 import { ElecExperiment, MicroExperiment, SimExperiment } from '../engine/sims/Experiments';
 import { img, useLab } from '../engine/shared';
 import { sounds } from '../utils/audio';
@@ -94,6 +95,7 @@ const StationRunner: React.FC<{ lab: ElementLab; station: ElementStation; onEnd:
     case 'micro': return <MicroExperiment def={station.micro} lab={lab.id} stationId={station.id} onEnd={onEnd} />;
     case 'quiz': return <QuizSequence items={station.items} idPrefix={pre} variant="elements" showHow onFinish={onEnd} />;
     case 'arcade': return <Arcade def={station.arcade} idPrefix={pre} onEnd={onEnd} />;
+    case 'wheel': return <FalconWheel lab={lab.id} idPrefix={pre} questions={station.wheel} onEnd={onEnd} />;
   }
 };
 

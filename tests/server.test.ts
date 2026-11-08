@@ -322,3 +322,34 @@ test('ترحيل بيانات النسخة القديمة: تُحفظ ولا ت�
   const stored = JSON.parse(fs.readFileSync(path.join(srv.dataDir, 'lab-store.json'), 'utf-8'));
   assert.deepEqual(stored.students['SQR-Si-1111'].legacy.scores, { falcon: 5, cipher: 2 });
 });
+
+test('عجلة الصقور: نقطتان أو نقطة لكل سؤال، تُحتسب مرة واحدة ومستقلة لكل مختبر', async () => {
+  const srv = await startServer({ TEACHER_CODE: CODE });
+  let r = await srv.call('POST', '/api/student/register', { fullName: 'ليان محمد خالد', pin: '2468' });
+  const id = r.data.student.id as string;
+  const key = r.data.studentKey as string;
+  r = await srv.call('POST', '/api/teacher/login', { code: CODE });
+  const token = r.data.token as string;
+  await srv.call('POST', '/api/teacher/approve', { studentId: id }, token);
+
+  const score = (taskId: string, points: number) => srv.call('POST', '/api/student/score', { studentId: id, studentKey: key, taskId, points, epoch: 0 });
+  assert.equal((await score('ca.wheel.0', 3)).status, 400, 'أعلى من نقطتين مرفوض');
+  assert.equal((await score('at.wheel.0', 2)).status, 400, 'لا عجلة في مختبر الذرة');
+  assert.equal((await score('ca.wheel.0', 2)).status, 200);
+  assert.equal((await score('ca.wheel.1', 1)).status, 200);
+  r = await score('ca.wheel.1', 2);
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.data.student.labPoints, { at: 0, ca: 3, su: 0, si: 0 }, 'السؤال لا يُحتسب مرتين');
+  r = await score('su.wheel.0', 2);
+  assert.deepEqual(r.data.student.labPoints, { at: 0, ca: 3, su: 2, si: 0 });
+});
+
+test('توجيه أ. شهد: النص السابق يُستبدل بالجديد، ونص المعلمة الخاص يبقى', async () => {
+  const OLD = 'مرحبًا بكم يا صقور الكيمياء! اليوم مراجعة على شكل ألعاب وتحديات: نراجع فصل الذرة والعناصر ونجمع النقاط، ونرى من يصبح «صقر الكيمياء».';
+  let srv = await startServer({}, { students: {}, session: { isOpen: true, announcement: OLD } });
+  let r = await srv.call('GET', '/api/session');
+  assert.match(r.data.session.announcement, /^مرحبًا بكم يا صقور الكيمياء في منصة سنابل التعليمية، في مختبر أ\. شهد نصير!\nهنا تبدأ التحديات/);
+  srv = await startServer({}, { students: {}, session: { isOpen: true, announcement: 'نص خاص' } });
+  r = await srv.call('GET', '/api/session');
+  assert.equal(r.data.session.announcement, "نص خاص");
+});

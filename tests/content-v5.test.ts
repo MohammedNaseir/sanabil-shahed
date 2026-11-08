@@ -21,17 +21,17 @@ test('بوابات الذرة الست: العدد والنقاط كما في v5
   assert.deepEqual(ATOM_GATES.map(g => g.game ?? null), [null, null, null, 'sink', 'streak', 'case']);
 });
 
-test('مختبرات العناصر: سبع محطات لكل عنصر بالترتيب نفسه', () => {
+test('مختبرات العناصر: «عجلة الصقور» أولاً ثم محطات v5 السبع بالترتيب نفسه', () => {
   const shape = ELEMENT_LABS.map(L => [L.id, L.stations.map(s => `${s.id}:${s.kind}`)]);
   assert.deepEqual(shape, [
-    ['ca', ['c2:sim', 'c4:elec', 'g1:quiz', 'g2:quiz', 'g3:quiz', 'g4:arcade', 'g5:arcade']],
-    ['su', ['s1:micro', 's6:sim', 'g1:quiz', 'g2:quiz', 'g3:quiz', 'g4:arcade', 'g5:arcade']],
-    ['si', ['i3:sim', 'i4:sim', 'g1:quiz', 'g2:quiz', 'g3:quiz', 'g4:arcade', 'g5:arcade']],
+    ['ca', ['wheel:wheel', 'c2:sim', 'c4:elec', 'g1:quiz', 'g2:quiz', 'g3:quiz', 'g4:arcade', 'g5:arcade']],
+    ['su', ['wheel:wheel', 's1:micro', 's6:sim', 'g1:quiz', 'g2:quiz', 'g3:quiz', 'g4:arcade', 'g5:arcade']],
+    ['si', ['wheel:wheel', 'i3:sim', 'i4:sim', 'g1:quiz', 'g2:quiz', 'g3:quiz', 'g4:arcade', 'g5:arcade']],
   ]);
   const counts = ELEMENT_LABS.map(L => L.stations.map(s => stationTasks(L.id, s).length));
-  assert.deepEqual(counts, [[2, 2, 1, 3, 2, 7, 6], [3, 2, 1, 3, 2, 6, 6], [2, 2, 1, 3, 2, 6, 6]]);
-  assert.deepEqual(LAB_MAX, { at: 70, ca: 33, su: 33, si: 32 });
-  assert.equal(Object.keys(TASK_POINTS).length, 132);
+  assert.deepEqual(counts, [[5, 2, 2, 1, 3, 2, 7, 6], [5, 3, 2, 1, 3, 2, 6, 6], [5, 2, 2, 1, 3, 2, 6, 6]]);
+  assert.deepEqual(LAB_MAX, { at: 70, ca: 43, su: 43, si: 42 });
+  assert.equal(Object.keys(TASK_POINTS).length, 150);
 });
 
 test('جدول المهام الخفيف (taskTable.ts) يطابق المحتوى', () => {
@@ -54,6 +54,11 @@ test('كل نشاط صالح: الإجابة موجودة والصور المو�
   for (const L of ELEMENT_LABS) {
     assert.ok(imgs.has(L.gate) && imgs.has(L.bg), `${L.id}: صورة البوابة`);
     for (const s of L.stations) {
+      if (s.kind === 'wheel') {
+        assert.equal(s.wheel.length, 5, `${L.id}: خمسة أسئلة في العجلة`);
+        for (const w of s.wheel) assert.ok(w.o.length === 3 && w.h && w.e && w.topic && w.emoji, `${L.id}.wheel: ${w.topic}`);
+        continue;
+      }
       const items: Item[] = s.kind === 'quiz' ? s.items : s.kind === 'arcade' ? s.arcade.items
         : s.kind === 'sim' ? s.sim.post : s.kind === 'elec' ? s.elec.post : [s.micro.intro, ...s.micro.post];
       items.forEach((it, j) => check(it, `${L.id}.${s.id}.${j}`));

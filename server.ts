@@ -203,9 +203,13 @@ interface DBStore {
   session: LabSessionConfig;
 }
 
+const DEFAULT_ANNOUNCEMENT = 'مرحبًا بكم يا صقور الكيمياء في منصة سنابل التعليمية، في مختبر أ. شهد نصير!\nهنا تبدأ التحديات، ونخوض الأسئلة، ونختبر معلوماتنا وتفكيرنا الكيميائي بكل حماس! 🦅💙';
+/** نص التوجيه السابق: يُستبدل تلقائياً بالجديد ما دامت المعلمة لم تكتب نصاً خاصاً بها. */
+const PREVIOUS_ANNOUNCEMENT = 'مرحبًا بكم يا صقور الكيمياء! اليوم مراجعة على شكل ألعاب وتحديات: نراجع فصل الذرة والعناصر ونجمع النقاط، ونرى من يصبح «صقر الكيمياء».';
+
 const DEFAULT_SESSION: LabSessionConfig = {
   isOpen: true,
-  announcement: 'مرحبًا بكم يا صقور الكيمياء! اليوم مراجعة على شكل ألعاب وتحديات: نراجع فصل الذرة والعناصر ونجمع النقاط، ونرى من يصبح «صقر الكيمياء».',
+  announcement: DEFAULT_ANNOUNCEMENT,
   lessonName: 'مراجعة فصل الذرة والعناصر — الكيمياء الصف العاشر',
   teacherName: 'أ. شهد نصير',
   organization: 'منصة سنابل التعليمية',
@@ -279,6 +283,7 @@ try {
       students[id] = normalizeStudent({ ...rec, id });
     }
     store = { students, session: { ...DEFAULT_SESSION, ...(parsed.session || {}) } };
+    if (store.session.announcement === PREVIOUS_ANNOUNCEMENT) store.session.announcement = DEFAULT_ANNOUNCEMENT;
   } else {
     fs.writeFileSync(DB_FILE, JSON.stringify(store, null, 2), 'utf-8');
   }
