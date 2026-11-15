@@ -3,6 +3,7 @@ export interface LabPoints {
   ca: number;
   su: number;
   si: number;
+  ms: number;
 }
 
 export interface ProgressSummary {

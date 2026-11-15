@@ -149,8 +149,8 @@ export const ChemicalIdCard: React.FC<ChemicalIdCardProps> = ({ student, onClose
             {/* Micro Stations Progress */}
             <div className="pt-2">
               <span className="text-[10px] text-slate-400 block mb-1.5 font-bold">نقاط المختبرات:</span>
-              <div className="grid grid-cols-4 gap-1.5 text-center">
-                {([['at', '⚛️', 'الذرة'], ['ca', '🧪', 'الكالسيوم'], ['su', '🔥', 'الكبريت'], ['si', '💡', 'السيليكون']] as const).map(([k, icon, name]) => {
+              <div className="grid grid-cols-5 gap-1.5 text-center">
+                {([['at', '⚛️', 'الذرة'], ['ca', '🧪', 'الكالسيوم'], ['su', '🔥', 'الكبريت'], ['si', '💡', 'السيليكون'], ['ms', '⚖️', 'حفظ الكتلة']] as const).map(([k, icon, name]) => {
                   const pts = student.labPoints?.[k] ?? 0;
                   return (
                     <div key={k} className={`p-1.5 rounded-lg border text-[10px] flex flex-col items-center justify-center ${pts ? 'bg-amber-500/15 border-amber-500/50 text-amber-300' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>

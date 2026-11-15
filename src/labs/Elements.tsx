@@ -235,7 +235,7 @@ export const Finale: React.FC<{ tasks: Record<string, number>; onBack: () => voi
   return (
     <section className="max-w-2xl mx-auto text-center rounded-3xl border hairline bg-slate-900/60 p-8 sm:p-10 animate-in">
       <h1 className="font-display text-3xl sm:text-4xl text-white">رحلة البحث والاكتشاف</h1>
-      <p className="font-display text-xl text-amber-300 mt-3">لقبك: {rankTitle(t.total)} · نقاطك: {t.total}</p>
+      <p className="font-display text-xl text-amber-300 mt-3">لقبك: {rankTitle(t.at + t.ca + t.su + t.si)} · نقاطك: {t.at + t.ca + t.su + t.si}</p>
       <ul className="mt-5 space-y-2 text-[15px]">
         <li className={atomDone ? 'text-emerald-300' : 'text-slate-500'}>{atomDone ? '✓' : '○'} باحث الذرة ({t.at} نقطة)</li>
         {ELEMENT_LABS.map(L => (

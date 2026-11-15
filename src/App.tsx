@@ -395,7 +395,7 @@ export default function App() {
   // =================== قيم العرض ===================
 
   const displayStudent: Student | null = currentStudent
-    ? { ...currentStudent, totalPoints: totals.total, labPoints: { at: totals.at, ca: totals.ca, su: totals.su, si: totals.si } }
+    ? { ...currentStudent, totalPoints: totals.total, labPoints: { at: totals.at, ca: totals.ca, su: totals.su, si: totals.si, ms: totals.ms } }
     : null;
 
   const atomAttempted = Object.keys(progress.tasks).filter(t => t.startsWith('at.')).length;

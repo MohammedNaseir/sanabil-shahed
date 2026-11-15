@@ -12,7 +12,7 @@ import { Falcon } from './Falcon';
 import { Link } from './Link';
 import { Stadium } from './Stadium';
 import { Wheel } from './Wheel';
-import { ConfirmBtn, GOLD, GoldBtn, QuietBtn, Scale, StationIcon } from './ui';
+import { GOLD, GoldBtn, QuietBtn, Scale, StationIcon } from './ui';
 import { sounds } from '../../utils/audio';
 import { goldBurst } from './ui';
 
@@ -183,7 +183,7 @@ const Finale: React.FC<{ api: ReturnType<typeof useMassState>; studentName: stri
 
         <div className="mt-7 flex flex-wrap justify-center gap-3">
           <GoldBtn onClick={onHub}>العودة إلى الشاشة الرئيسية</GoldBtn>
-          <ConfirmBtn label="إعادة التجربة" confirmLabel="اضغط مرة أخرى لمسح التقدم" onConfirm={onRestart} />
+          <QuietBtn onClick={onRestart}>إعادة التجربة (دون نقاط جديدة)</QuietBtn>
         </div>
       </div>
     </section>
@@ -212,7 +212,7 @@ export const MassLab: React.FC<{
   switch (stage) {
     case 'intro': return <Intro onStart={() => onStage('hub')} onExit={onExit} />;
     case 'hub': return <Hub api={api} onOpen={s => { sounds.click(); onStage(s); }} onFinale={() => onStage('finale')} onExit={onExit} />;
-    case 'finale': return <Finale api={api} studentName={studentName} onHub={() => onStage('hub')} onRestart={() => { api.reset(); onStage('hub'); }} />;
+    case 'finale': return <Finale api={api} studentName={studentName} onHub={() => onStage('hub')} onRestart={() => onStage('intro')} />;
     case 'wheel': return <Wheel api={api} onBack={backToHub} />;
     case 'falcon': return <Falcon api={api} onBack={backToHub} />;
     case 'link': return <Link api={api} onBack={backToHub} />;

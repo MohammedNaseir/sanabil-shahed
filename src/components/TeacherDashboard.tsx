@@ -530,6 +530,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onClose, onR
                           <th className="p-3">الكالسيوم</th>
                           <th className="p-3">الكبريت</th>
                           <th className="p-3">السيليكون</th>
+                          <th className="p-3">حفظ الكتلة</th>
                           <th className="p-3">الإنجاز</th>
                           <th className="p-3">المجموع ⭐</th>
                           <th className="p-3 text-center">إجراء</th>
@@ -558,6 +559,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onClose, onR
                             <td className="p-3 font-bold text-slate-300">{student.labPoints?.ca || '—'}</td>
                             <td className="p-3 font-bold text-slate-300">{student.labPoints?.su || '—'}</td>
                             <td className="p-3 font-bold text-slate-300">{student.labPoints?.si || '—'}</td>
+                            <td className="p-3 font-bold text-amber-300">{student.labPoints?.ms || '—'}</td>
                             <td className="p-3 text-[11px] text-slate-400 whitespace-nowrap">
                               بوابات {student.summary?.atomGates ?? 0}/6 · محطات {student.summary?.elementStations ?? 0}/21
                             </td>
@@ -649,7 +651,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onClose, onR
                             <div>
                               <span className="font-bold text-sm text-white block">{student.fullName}</span>
                               <span className="text-[10px] text-slate-400">
-                                الذرة {student.labPoints?.at ?? 0} • الكالسيوم {student.labPoints?.ca ?? 0} • الكبريت {student.labPoints?.su ?? 0} • السيليكون {student.labPoints?.si ?? 0}
+                                الذرة {student.labPoints?.at ?? 0} • الكالسيوم {student.labPoints?.ca ?? 0} • الكبريت {student.labPoints?.su ?? 0} • السيليكون {student.labPoints?.si ?? 0} • حفظ الكتلة {student.labPoints?.ms ?? 0}
                               </span>
                             </div>
                           </div>

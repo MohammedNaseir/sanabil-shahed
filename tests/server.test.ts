@@ -156,14 +156,14 @@ test('دورة الطالب الكاملة: تسجيل، اعتماد، نقاط
   r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, taskId: 'at.1.0', points: 2, epoch: 0 });
   r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, taskId: 'ca.g4.0', points: 1, epoch: 0 });
   r = await srv.call('POST', '/api/student/score', { studentId: student.id, studentKey: key, taskId: 'ca.c2.done', points: 0, epoch: 0 });
-  assert.deepEqual(r.data.student.labPoints, { at: 2, ca: 1, su: 0, si: 0 });
+  assert.deepEqual(r.data.student.labPoints, { at: 2, ca: 1, su: 0, si: 0, ms: 0 });
   assert.equal(r.data.student.totalPoints, 3);
   assert.equal(r.data.student.summary.elementStations, 1);
 
   r = await srv.call('GET', '/api/leaderboard');
   const entry = r.data.leaderboard.find((e: { id: string }) => e.id === student.id);
   assert.equal(entry.totalPoints, 3);
-  assert.deepEqual(entry.labPoints, { at: 2, ca: 1, su: 0, si: 0 });
+  assert.deepEqual(entry.labPoints, { at: 2, ca: 1, su: 0, si: 0, ms: 0 });
   assert.equal(entry.tasks, undefined, 'لوحة الشرف لا تكشف سجل المهام');
 
   // المعلمة تفتح مختبر العناصر للجميع
@@ -339,9 +339,9 @@ test('عجلة الصقور: نقطتان أو نقطة لكل سؤال، تُح
   assert.equal((await score('ca.wheel.1', 1)).status, 200);
   r = await score('ca.wheel.1', 2);
   assert.equal(r.status, 200);
-  assert.deepEqual(r.data.student.labPoints, { at: 0, ca: 3, su: 0, si: 0 }, 'السؤال لا يُحتسب مرتين');
+  assert.deepEqual(r.data.student.labPoints, { at: 0, ca: 3, su: 0, si: 0, ms: 0 }, 'السؤال لا يُحتسب مرتين');
   r = await score('su.wheel.0', 2);
-  assert.deepEqual(r.data.student.labPoints, { at: 0, ca: 3, su: 2, si: 0 });
+  assert.deepEqual(r.data.student.labPoints, { at: 0, ca: 3, su: 2, si: 0, ms: 0 });
 });
 
 test('توجيه أ. شهد: النص السابق يُستبدل بالجديد، ونص المعلمة الخاص يبقى', async () => {
@@ -352,4 +352,28 @@ test('توجيه أ. شهد: النص السابق يُستبدل بالجديد
   srv = await startServer({}, { students: {}, session: { isOpen: true, announcement: 'نص خاص' } });
   r = await srv.call('GET', '/api/session');
   assert.equal(r.data.session.announcement, "نص خاص");
+});
+
+test('مختبر حفظ الكتلة: نقاطه تدخل مجموع الطالب ولوحة الشرف وتُحتسب مرة واحدة', async () => {
+  const srv = await startServer({ TEACHER_CODE: CODE });
+  let r = await srv.call('POST', '/api/student/register', { fullName: 'رند خالد سامي', pin: '1357' });
+  const id = r.data.student.id as string;
+  const key = r.data.studentKey as string;
+  r = await srv.call('POST', '/api/teacher/login', { code: CODE });
+  const token = r.data.token as string;
+  await srv.call('POST', '/api/teacher/approve', { studentId: id }, token);
+
+  const score = (taskId: string, points: number) => srv.call('POST', '/api/student/score', { studentId: id, studentKey: key, taskId, points, epoch: 0 });
+  assert.equal((await score('ms.wheel.0', 16)).status, 400, 'أعلى من 15 مرفوض');
+  assert.equal((await score('ms.wheel.10', 15)).status, 400, 'مهمة غير معروفة');
+  assert.equal((await score('ms.bonus.wheel', 21)).status, 400, 'مكافأة الإنجاز 20 كحد أقصى');
+  assert.equal((await score('ms.wheel.0', 15)).status, 200);
+  assert.equal((await score('ms.bonus.stadium', 20)).status, 200);
+  r = await score('ms.wheel.0', 10);
+  assert.deepEqual(r.data.student.labPoints, { at: 0, ca: 0, su: 0, si: 0, ms: 35 }, 'لا يُحتسب مرتين');
+  assert.equal(r.data.student.totalPoints, 35);
+  r = await srv.call('GET', '/api/leaderboard');
+  const entry = (r.data.leaderboard ?? r.data).find((e: { id: string }) => e.id === id);
+  assert.equal(entry.totalPoints, 35);
+  assert.equal(entry.labPoints.ms, 35);
 });

@@ -10,9 +10,9 @@
  */
 import { TASK_TABLE } from './taskTable';
 
-export const LAB_IDS = ['at', 'ca', 'su', 'si'] as const;
+export const LAB_IDS = ['at', 'ca', 'su', 'si', 'ms'] as const;
 export type LabId = typeof LAB_IDS[number];
-export type ElementLabId = Exclude<LabId, 'at'>;
+export type ElementLabId = 'ca' | 'su' | 'si';
 
 /** كل المهام المعروفة ونقاطها القصوى. */
 export const TASK_POINTS: Readonly<Record<string, number>> = TASK_TABLE;
@@ -48,7 +48,7 @@ for (const id of IDS) {
 
 /** أعلى مجموع ممكن لكل مختبر. */
 export const LAB_MAX: Record<LabId, number> = (() => {
-  const m = { at: 0, ca: 0, su: 0, si: 0 } as Record<LabId, number>;
+  const m = { at: 0, ca: 0, su: 0, si: 0, ms: 0 } as Record<LabId, number>;
   for (const [id, pts] of Object.entries(TASK_POINTS)) {
     const lab = labOfTask(id);
     if (lab) m[lab] += pts;
@@ -61,12 +61,12 @@ export const ELEMENT_STATION_COUNT = STATION_DONE.ca.length + STATION_DONE.su.le
 
 /** يجمع النقاط المكتسبة لكل مختبر من سجل المهام. */
 export function labTotals(tasks: Record<string, number>) {
-  const t = { at: 0, ca: 0, su: 0, si: 0 } as Record<LabId, number>;
+  const t = { at: 0, ca: 0, su: 0, si: 0, ms: 0 } as Record<LabId, number>;
   for (const [id, pts] of Object.entries(tasks)) {
     const lab = labOfTask(id);
     if (lab && isTaskId(id)) t[lab] += Math.max(0, Math.min(TASK_POINTS[id], Number(pts) || 0));
   }
-  return { ...t, total: t.at + t.ca + t.su + t.si };
+  return { ...t, total: t.at + t.ca + t.su + t.si + t.ms };
 }
 
 /** أنجز الطالب بوابة الذرة إذا جرّب كل أنشطتها. */
@@ -105,4 +105,5 @@ export const LAB_NAMES: Record<LabId, string> = {
   ca: 'مختبر الكالسيوم',
   su: 'مختبر الكبريت',
   si: 'مختبر السيليكون',
+  ms: 'مختبر حفظ الكتلة',
 };

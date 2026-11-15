@@ -22,7 +22,8 @@ export const ChemistryCertificateModal: React.FC<ChemistryCertificateModalProps>
     window.print();
   };
 
-  const percentage = Math.round((student.totalPoints / TOTAL_POINTS) * 100);
+  const reviewPoints = student.labPoints ? student.labPoints.at + student.labPoints.ca + student.labPoints.su + student.labPoints.si : student.totalPoints;
+  const percentage = Math.min(100, Math.round((reviewPoints / TOTAL_POINTS) * 100));
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
