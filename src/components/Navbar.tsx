@@ -41,7 +41,7 @@ const SYNC_LABELS: Record<SyncState, { text: string; cls: string; Icon: React.FC
 function useActive(currentView: string) {
   return {
     selection: currentView === 'lab_selection' || currentView === 'finale',
-    questions: currentView === 'questions',
+    questions: currentView === 'questions' || currentView === 'mass',
     review: currentView === 'review',
     atom: currentView === 'atom_hub' || currentView === 'atom_gate',
     elements: currentView === 'elements_hub' || currentView === 'element_lab',
@@ -209,7 +209,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
             </span>
           )}
           {/* الوضع الفاتح/الداكن يخصّ صفحات المختبرات؛ الواجهات الخارجية كحلية دائماً */}
-          {!['lab_selection', 'questions', 'review'].includes(currentView) && <ThemeToggle />}
+          {!['lab_selection', 'questions', 'review', 'mass'].includes(currentView) && <ThemeToggle />}
           <div className="hidden md:flex items-center gap-2">
             <IconButton
               label={soundOn ? 'إيقاف المؤثرات الصوتية' : 'تشغيل المؤثرات الصوتية'}

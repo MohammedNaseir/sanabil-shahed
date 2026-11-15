@@ -22,7 +22,7 @@ import { NoticeToast, type Notice } from './components/NoticeToast';
 import { Student, LabSession } from './types';
 import { sounds } from './utils/audio';
 import confetti from './utils/confetti';
-import { type Route, type ElementId, HOME_ROUTE, formatHash, parseHash, sameRoute } from './utils/routing';
+import { type Route, type ElementId, type MassStage, HOME_ROUTE, formatHash, parseHash, sameRoute } from './utils/routing';
 import { usePolling } from './utils/usePolling';
 import {
   GUEST_SCOPE, type Progress, type NotebookPage, applyServerStudent, emptyProgress, loadProgress, loadStudent, loadStudentKey,
@@ -38,6 +38,7 @@ const AtomGatePage = lazy(() => import('./labs/AtomGate').then(m => ({ default: 
 const ElementsHub = lazy(() => import('./labs/Elements').then(m => ({ default: m.ElementsHub })));
 const ElementLabPage = lazy(() => import('./labs/Elements').then(m => ({ default: m.ElementLabPage })));
 const Finale = lazy(() => import('./labs/Elements').then(m => ({ default: m.Finale })));
+const MassLab = lazy(() => import('./labs/mass/MassLab').then(m => ({ default: m.MassLab })));
 const TeacherDashboard = lazy(() => import('./components/TeacherDashboard').then(m => ({ default: m.TeacherDashboard })));
 const LeaderboardModal = lazy(() => import('./components/LeaderboardModal').then(m => ({ default: m.LeaderboardModal })));
 const CertificateModal = lazy(() => import('./components/ChemistryCertificateModal').then(m => ({ default: m.ChemistryCertificateModal })));
@@ -93,6 +94,7 @@ export default function App() {
     elements: () => navigate({ view: 'elements_hub', gate: null, lab: null }),
     lab: (lab: ElementId) => navigate({ view: 'element_lab', gate: null, lab }),
     finale: () => navigate({ view: 'finale', gate: null, lab: null }),
+    mass: (stage: MassStage = 'intro') => navigate({ view: 'mass', gate: null, lab: null, stage }),
   }), [navigate]);
 
   const currentView = route.view;
@@ -399,7 +401,7 @@ export default function App() {
   const atomAttempted = Object.keys(progress.tasks).filter(t => t.startsWith('at.')).length;
   const elDone = elementStationsDone(progress.tasks);
 
-  const isSectionView = currentView === 'lab_selection' || currentView === 'questions' || currentView === 'review';
+  const isSectionView = currentView === 'lab_selection' || currentView === 'questions' || currentView === 'review' || currentView === 'mass';
 
   const notebookLab: LabId = route.view === 'element_lab' && route.lab ? route.lab : 'at';
 
@@ -443,7 +445,27 @@ export default function App() {
           <MobileTabBar {...navProps} />
           <main id="main" className="relative z-10 flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-28 md:py-8">
             {currentView === 'lab_selection' && <SectionsScreen onQuestions={go.questions} onReview={go.review} />}
-            {currentView === 'questions' && <QuestionsSection onSections={go.labs} onReview={go.review} />}
+            {currentView === 'questions' && (
+              <QuestionsSection
+                labs={[{
+                  id: 'mass',
+                  title: 'مختبر حفظ الكتلة',
+                  tag: 'مختبر الأسئلة · قانون حفظ الكتلة',
+                  description: 'خمس محطات مليئة بالألعاب: عجلة الصقور، بصمة الكيميائي، مختبر التحدي، أكاديمية العلماء، وملعب الصقور بين قسمين.',
+                  cta: 'الدخول إلى مختبر حفظ الكتلة',
+                  onOpen: () => go.mass('intro'),
+                }]}
+                onSections={go.labs}
+                onReview={go.review}
+              />
+            )}
+            {currentView === 'mass' && (
+              <LazyBoundary>
+                <Suspense fallback={<LoadingPanel />}>
+                  <MassLab key={scope} scope={scope} studentName={currentStudent?.fullName ?? null} stage={route.stage ?? 'intro'} onStage={s => go.mass(s)} onExit={go.questions} />
+                </Suspense>
+              </LazyBoundary>
+            )}
             {currentView === 'review' && (
               <ReviewSection
                 atomProgress={`${atomAttempted} / ${ATOM_TASK_COUNT} نشاطًا · ${totals.at} نقطة`}

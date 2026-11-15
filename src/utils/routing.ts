@@ -12,19 +12,28 @@
  *   #/elements          مختبر العناصر
  *   #/elements/ca|su|si مختبر الكالسيوم أو الكبريت أو السيليكون
  *   #/finale            شاشة الإنجاز الختامية
+ *   #/mass              مختبر حفظ الكتلة (شاشة الدخول)
+ *   #/mass/hub          الشاشة الرئيسية للمختبر
+ *   #/mass/wheel|falcon|link|academy|stadium   إحدى المحطات الخمس
+ *   #/mass/finale       شاشة ختام المختبر
  */
 
 export const ELEMENT_IDS = ['ca', 'su', 'si'] as const;
 export type ElementId = typeof ELEMENT_IDS[number];
 export const ATOM_GATE_COUNT = 6;
 
-export type ViewName = 'reception' | 'lab_selection' | 'questions' | 'review' | 'atom_hub' | 'atom_gate' | 'elements_hub' | 'element_lab' | 'finale';
+export const MASS_STAGES = ['intro', 'hub', 'wheel', 'falcon', 'link', 'academy', 'stadium', 'finale'] as const;
+export type MassStage = typeof MASS_STAGES[number];
+
+export type ViewName = 'reception' | 'lab_selection' | 'questions' | 'review' | 'atom_hub' | 'atom_gate' | 'elements_hub' | 'element_lab' | 'finale' | 'mass';
 
 export interface Route {
   view: ViewName;
   /** رقم البوابة (0..5). */
   gate: number | null;
   lab: ElementId | null;
+  /** شاشة مختبر حفظ الكتلة (تظهر في مسار mass فقط). */
+  stage?: MassStage;
 }
 
 export const HOME_ROUTE: Route = { view: 'reception', gate: null, lab: null };
@@ -47,6 +56,12 @@ export function parseHash(hash: string): { route: Route; valid: boolean } {
       return second ? bad(r('review')) : ok(r('review'));
     case 'finale':
       return second ? bad(r('finale')) : ok(r('finale'));
+    case 'mass': {
+      const mass = (stage: MassStage): Route => ({ view: 'mass', gate: null, lab: null, stage });
+      if (!second) return ok(mass('intro'));
+      if ((MASS_STAGES as readonly string[]).includes(second) && second !== 'intro') return ok(mass(second as MassStage));
+      return bad(mass('intro'));
+    }
     case 'atom': {
       if (!second) return ok(r('atom_hub'));
       const n = Number(second);
@@ -73,9 +88,10 @@ export function formatHash(route: Route): string {
     case 'atom_gate': return route.gate != null ? `#/atom/${route.gate + 1}` : '#/atom';
     case 'elements_hub': return '#/elements';
     case 'element_lab': return route.lab ? `#/elements/${route.lab}` : '#/elements';
+    case 'mass': return !route.stage || route.stage === 'intro' ? '#/mass' : `#/mass/${route.stage}`;
   }
 }
 
 export function sameRoute(a: Route, b: Route) {
-  return a.view === b.view && a.gate === b.gate && a.lab === b.lab;
+  return a.view === b.view && a.gate === b.gate && a.lab === b.lab && a.stage === b.stage;
 }

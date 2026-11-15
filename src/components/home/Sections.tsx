@@ -136,22 +136,28 @@ export const SectionsScreen: React.FC<{ onQuestions: () => void; onReview: () =>
 /* ============================== قسم مختبرات الأسئلة ============================== */
 
 /**
- * مختبرات الأسئلة الخاصة بالدروس تُضاف هنا (لكل درس مختبره).
+ * مختبرات الأسئلة الخاصة بالدروس (لكل درس مختبره) تُمرَّر من App.
  * القسم منفصل تماماً عن مختبرات المراجعة، فلا يظهر فيه مختبر الذرة ولا مختبر العناصر.
  */
-export const QUESTION_LABS: { id: string; title: string; description: string; onOpen: () => void }[] = [];
+export interface QuestionLabCard { id: string; title: string; tag: string; description: string; cta: string; onOpen: () => void }
 
-export const QuestionsSection: React.FC<{ onSections: () => void; onReview: () => void }> = ({ onSections, onReview }) => (
+export const QuestionsSection: React.FC<{ labs: QuestionLabCard[]; onSections: () => void; onReview: () => void }> = ({ labs, onSections, onReview }) => (
   <div className="py-4 sm:py-8">
     <PageHead kicker="القسم الأول" title="مختبرات الأسئلة" sub="فكّر، حلّل، واكتشف طريق الإجابة!" />
 
-    {QUESTION_LABS.length > 0 ? (
-      <div className="mt-10 grid md:grid-cols-2 gap-5 lg:gap-8">
-        {QUESTION_LABS.map(l => (
+    {labs.length > 0 ? (
+      <div className="mt-10 grid md:grid-cols-2 gap-5 lg:gap-8 stagger">
+        {labs.map(l => (
           <article key={l.id} className="section-card rounded-[28px] p-6 sm:p-8 flex flex-col text-right">
-            <h2 className="font-display text-2xl text-white">{l.title}</h2>
-            <p className="mt-2 text-[15px] leading-loose text-slate-200">{l.description}</p>
-            <GoldButton onClick={l.onOpen} className="mt-6 self-start">ادخل المختبر</GoldButton>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 shrink-0 rounded-2xl p-3 bg-slate-950/50 border hairline"><FlaskIcon /></div>
+              <div>
+                <h2 className="font-display text-2xl sm:text-3xl text-white leading-tight">{l.title}</h2>
+                <p className="mt-1 text-sm text-amber-300">{l.tag}</p>
+              </div>
+            </div>
+            <p className="mt-4 text-[15px] leading-loose text-slate-200">{l.description}</p>
+            <GoldButton onClick={l.onOpen} className="mt-6 w-full">{l.cta}</GoldButton>
           </article>
         ))}
       </div>
