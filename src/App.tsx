@@ -22,7 +22,7 @@ import { NoticeToast, type Notice } from './components/NoticeToast';
 import { Student, LabSession } from './types';
 import { sounds } from './utils/audio';
 import confetti from './utils/confetti';
-import { type Route, type ElementId, type MassStage, HOME_ROUTE, formatHash, parseHash, sameRoute } from './utils/routing';
+import { type Route, type ElementId, type MassStage, type RatioStage, HOME_ROUTE, formatHash, parseHash, sameRoute } from './utils/routing';
 import { usePolling } from './utils/usePolling';
 import {
   GUEST_SCOPE, type Progress, type NotebookPage, applyServerStudent, emptyProgress, loadProgress, loadStudent, loadStudentKey,
@@ -38,6 +38,7 @@ const AtomGatePage = lazy(() => import('./labs/AtomGate').then(m => ({ default: 
 const ElementsHub = lazy(() => import('./labs/Elements').then(m => ({ default: m.ElementsHub })));
 const ElementLabPage = lazy(() => import('./labs/Elements').then(m => ({ default: m.ElementLabPage })));
 const Finale = lazy(() => import('./labs/Elements').then(m => ({ default: m.Finale })));
+const RatioLab = lazy(() => import('./labs/ratio/RatioLab').then(m => ({ default: m.RatioLab })));
 const MassLab = lazy(() => import('./labs/mass/MassLab').then(m => ({ default: m.MassLab })));
 const TeacherDashboard = lazy(() => import('./components/TeacherDashboard').then(m => ({ default: m.TeacherDashboard })));
 const LeaderboardModal = lazy(() => import('./components/LeaderboardModal').then(m => ({ default: m.LeaderboardModal })));
@@ -95,6 +96,7 @@ export default function App() {
     lab: (lab: ElementId) => navigate({ view: 'element_lab', gate: null, lab }),
     finale: () => navigate({ view: 'finale', gate: null, lab: null }),
     mass: (stage: MassStage = 'intro') => navigate({ view: 'mass', gate: null, lab: null, stage }),
+    ratio: (rstage: RatioStage = 'welcome') => navigate({ view: 'ratio', gate: null, lab: null, rstage }),
   }), [navigate]);
 
   const currentView = route.view;
@@ -395,13 +397,13 @@ export default function App() {
   // =================== قيم العرض ===================
 
   const displayStudent: Student | null = currentStudent
-    ? { ...currentStudent, totalPoints: totals.total, labPoints: { at: totals.at, ca: totals.ca, su: totals.su, si: totals.si, ms: totals.ms } }
+    ? { ...currentStudent, totalPoints: totals.total, labPoints: { at: totals.at, ca: totals.ca, su: totals.su, si: totals.si, ms: totals.ms, rt: totals.rt } }
     : null;
 
   const atomAttempted = Object.keys(progress.tasks).filter(t => t.startsWith('at.')).length;
   const elDone = elementStationsDone(progress.tasks);
 
-  const isSectionView = currentView === 'lab_selection' || currentView === 'questions' || currentView === 'review' || currentView === 'mass';
+  const isSectionView = currentView === 'lab_selection' || currentView === 'questions' || currentView === 'review' || currentView === 'mass' || currentView === 'ratio';
 
   const notebookLab: LabId = route.view === 'element_lab' && route.lab ? route.lab : 'at';
 
@@ -448,6 +450,13 @@ export default function App() {
             {currentView === 'questions' && (
               <QuestionsSection
                 labs={[{
+                  id: 'ratio',
+                  title: 'مختبر النسب الثابتة',
+                  tag: 'مختبر الأسئلة · قانون النسب الثابتة',
+                  description: 'خمس محطات: عجلة الصقور، من أنا؟، المعلم الصغير، خزنة الكيمياء، والمباراة النهائية التي تكشف بطل المختبر.',
+                  cta: 'الدخول إلى مختبر النسب الثابتة',
+                  onOpen: () => go.ratio('welcome'),
+                }, {
                   id: 'mass',
                   title: 'مختبر حفظ الكتلة',
                   tag: 'مختبر الأسئلة · قانون حفظ الكتلة',
@@ -458,6 +467,13 @@ export default function App() {
                 onSections={go.labs}
                 onReview={go.review}
               />
+            )}
+            {currentView === 'ratio' && (
+              <LazyBoundary>
+                <Suspense fallback={<LoadingPanel />}>
+                  <RatioLab key={scope} scope={scope} studentName={currentStudent?.fullName ?? null} stage={route.rstage ?? 'welcome'} onStage={s => go.ratio(s)} onExit={go.questions} />
+                </Suspense>
+              </LazyBoundary>
             )}
             {currentView === 'mass' && (
               <LazyBoundary>

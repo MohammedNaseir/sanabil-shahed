@@ -187,6 +187,107 @@ class SoundSystem {
       osc.stop(this.ctx.currentTime + 0.3);
     } catch {}
   }
+
+  // طقطقة عجلة تدور وتتباطأ تدريجياً (للمدة المعطاة بالمللي ثانية)
+  spin(ms = 4000) {
+    if (!this.enabled || typeof window === 'undefined') return;
+    let elapsed = 0;
+    let gap = 45;
+    const tick = () => {
+      this.wheelTick();
+      elapsed += gap;
+      gap *= 1.07;
+      if (elapsed < ms) window.setTimeout(tick, gap);
+    };
+    tick();
+  }
+
+  // صفارة حكم
+  whistle() {
+    if (!this.enabled) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    try {
+      const t0 = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const lfo = this.ctx.createOscillator();
+      const lfoGain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(2900, t0);
+      lfo.frequency.value = 38;
+      lfoGain.gain.value = 0.07;
+      lfo.connect(lfoGain);
+      lfoGain.connect(gain.gain);
+      gain.gain.setValueAtTime(0.14, t0);
+      gain.gain.setValueAtTime(0.14, t0 + 0.7);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.85);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(t0); lfo.start(t0);
+      osc.stop(t0 + 0.9); lfo.stop(t0 + 0.9);
+    } catch {}
+  }
+
+  // تصفيق جمهور
+  applause(seconds = 2) {
+    if (!this.enabled) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    try {
+      const rate = this.ctx.sampleRate;
+      const len = Math.floor(rate * seconds);
+      const buf = this.ctx.createBuffer(1, len, rate);
+      const data = buf.getChannelData(0);
+      let amp = 0;
+      for (let i = 0; i < len; i++) {
+        if (Math.random() < 0.0016) amp = 1;
+        amp *= 0.9986;
+        const overall = Math.min(1, i / (rate * 0.2)) * Math.min(1, (len - i) / (rate * 0.6));
+        data[i] = (Math.random() * 2 - 1) * amp * overall;
+      }
+      const src = this.ctx.createBufferSource();
+      src.buffer = buf;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 1800;
+      const gain = this.ctx.createGain();
+      gain.gain.value = 0.9;
+      src.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+      src.start();
+    } catch {}
+  }
+
+  // فتح الخزنة: قرقعة معدنية ثم رنين
+  vaultOpen() {
+    if (!this.enabled) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    try {
+      const t0 = this.ctx.currentTime;
+      const thud = this.ctx.createOscillator();
+      const tg = this.ctx.createGain();
+      thud.type = 'sine';
+      thud.frequency.setValueAtTime(130, t0);
+      thud.frequency.exponentialRampToValueAtTime(55, t0 + 0.35);
+      tg.gain.setValueAtTime(0.25, t0);
+      tg.gain.exponentialRampToValueAtTime(0.001, t0 + 0.4);
+      thud.connect(tg); tg.connect(this.ctx.destination);
+      thud.start(t0); thud.stop(t0 + 0.4);
+      [784, 988, 1175, 1568].forEach((f, i) => {
+        if (!this.ctx) return;
+        const o = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        o.type = 'triangle';
+        const st = t0 + 0.45 + i * 0.09;
+        o.frequency.setValueAtTime(f, st);
+        g.gain.setValueAtTime(0.13, st);
+        g.gain.exponentialRampToValueAtTime(0.001, st + 0.5);
+        o.connect(g); g.connect(this.ctx.destination);
+        o.start(st); o.stop(st + 0.5);
+      });
+    } catch {}
+  }
 }
 
 export const sounds = new SoundSystem();

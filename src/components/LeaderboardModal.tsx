@@ -9,7 +9,7 @@ interface LeaderboardEntry {
   fullName: string;
   chemicalId?: string;
   falconTitle: string;
-  labPoints?: { at: number; ca: number; su: number; si: number; ms?: number };
+  labPoints?: { at: number; ca: number; su: number; si: number; ms?: number; rt?: number };
   summary?: { atomGates: number; elementStations: number };
   totalPoints: number;
   isOnline: boolean;
@@ -131,7 +131,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ currentStude
                           {student.chemicalId || student.id}
                         </span>
                         <span>•</span>
-                        <span>الذرة {student.labPoints?.at ?? 0} • العناصر {(student.labPoints?.ca ?? 0) + (student.labPoints?.su ?? 0) + (student.labPoints?.si ?? 0)}{student.labPoints?.ms ? ` • حفظ الكتلة ${student.labPoints.ms}` : ''}</span>
+                        <span>الذرة {student.labPoints?.at ?? 0} • العناصر {(student.labPoints?.ca ?? 0) + (student.labPoints?.su ?? 0) + (student.labPoints?.si ?? 0)}{student.labPoints?.ms ? ` • حفظ الكتلة ${student.labPoints.ms}` : ''}{student.labPoints?.rt ? ` • النسب الثابتة ${student.labPoints.rt}` : ''}</span>
                       </div>
                     </div>
                   </div>

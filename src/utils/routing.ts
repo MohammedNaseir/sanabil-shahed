@@ -16,6 +16,10 @@
  *   #/mass/hub          الشاشة الرئيسية للمختبر
  *   #/mass/wheel|falcon|link|academy|stadium   إحدى المحطات الخمس
  *   #/mass/finale       شاشة ختام المختبر
+ *   #/ratio             مختبر النسب الثابتة (شاشة الترحيب)
+ *   #/ratio/map         خريطة المحطات الخمس
+ *   #/ratio/wheel|who|teach|vault|match   إحدى المحطات
+ *   #/ratio/finale      شاشة ختام المختبر
  */
 
 export const ELEMENT_IDS = ['ca', 'su', 'si'] as const;
@@ -25,7 +29,10 @@ export const ATOM_GATE_COUNT = 6;
 export const MASS_STAGES = ['intro', 'hub', 'wheel', 'falcon', 'link', 'academy', 'stadium', 'finale'] as const;
 export type MassStage = typeof MASS_STAGES[number];
 
-export type ViewName = 'reception' | 'lab_selection' | 'questions' | 'review' | 'atom_hub' | 'atom_gate' | 'elements_hub' | 'element_lab' | 'finale' | 'mass';
+export const RATIO_STAGES = ['welcome', 'map', 'wheel', 'who', 'teach', 'vault', 'match', 'finale'] as const;
+export type RatioStage = typeof RATIO_STAGES[number];
+
+export type ViewName = 'reception' | 'lab_selection' | 'questions' | 'review' | 'atom_hub' | 'atom_gate' | 'elements_hub' | 'element_lab' | 'finale' | 'mass' | 'ratio';
 
 export interface Route {
   view: ViewName;
@@ -34,6 +41,8 @@ export interface Route {
   lab: ElementId | null;
   /** شاشة مختبر حفظ الكتلة (تظهر في مسار mass فقط). */
   stage?: MassStage;
+  /** شاشة مختبر النسب الثابتة (تظهر في مسار ratio فقط). */
+  rstage?: RatioStage;
 }
 
 export const HOME_ROUTE: Route = { view: 'reception', gate: null, lab: null };
@@ -56,6 +65,12 @@ export function parseHash(hash: string): { route: Route; valid: boolean } {
       return second ? bad(r('review')) : ok(r('review'));
     case 'finale':
       return second ? bad(r('finale')) : ok(r('finale'));
+    case 'ratio': {
+      const ratio = (rstage: RatioStage): Route => ({ view: 'ratio', gate: null, lab: null, rstage });
+      if (!second) return ok(ratio('welcome'));
+      if ((RATIO_STAGES as readonly string[]).includes(second) && second !== 'welcome') return ok(ratio(second as RatioStage));
+      return bad(ratio('welcome'));
+    }
     case 'mass': {
       const mass = (stage: MassStage): Route => ({ view: 'mass', gate: null, lab: null, stage });
       if (!second) return ok(mass('intro'));
@@ -88,10 +103,11 @@ export function formatHash(route: Route): string {
     case 'atom_gate': return route.gate != null ? `#/atom/${route.gate + 1}` : '#/atom';
     case 'elements_hub': return '#/elements';
     case 'element_lab': return route.lab ? `#/elements/${route.lab}` : '#/elements';
+    case 'ratio': return !route.rstage || route.rstage === 'welcome' ? '#/ratio' : `#/ratio/${route.rstage}`;
     case 'mass': return !route.stage || route.stage === 'intro' ? '#/mass' : `#/mass/${route.stage}`;
   }
 }
 
 export function sameRoute(a: Route, b: Route) {
-  return a.view === b.view && a.gate === b.gate && a.lab === b.lab && a.stage === b.stage;
+  return a.view === b.view && a.gate === b.gate && a.lab === b.lab && a.stage === b.stage && a.rstage === b.rstage;
 }

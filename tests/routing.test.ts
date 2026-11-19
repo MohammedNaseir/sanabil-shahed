@@ -19,6 +19,9 @@ test('كل مسار صالح يتحول إلى hash ويعود كما هو', () 
     { view: 'mass', gate: null, lab: null, stage: 'hub' },
     { view: 'mass', gate: null, lab: null, stage: 'stadium' },
     { view: 'mass', gate: null, lab: null, stage: 'finale' },
+    { view: 'ratio', gate: null, lab: null, rstage: 'welcome' },
+    { view: 'ratio', gate: null, lab: null, rstage: 'map' },
+    { view: 'ratio', gate: null, lab: null, rstage: 'match' },
   ];
   for (const r of routes) {
     const { route, valid } = parseHash(formatHash(r));
@@ -39,6 +42,8 @@ test('الروابط غير الصالحة تعود لمكان آمن', () => {
   assert.deepEqual(parseHash('#/silicon/falcon'), { route: HOME_ROUTE, valid: false }, 'روابط النسخة القديمة تعود للبداية');
   assert.deepEqual(parseHash('#/mass/nope'), { route: { view: 'mass', gate: null, lab: null, stage: 'intro' }, valid: false });
   assert.equal(parseHash('#/mass/hub/extra').valid, false);
+  assert.deepEqual(parseHash('#/ratio/zzz'), { route: { view: 'ratio', gate: null, lab: null, rstage: 'welcome' }, valid: false });
+  assert.equal(formatHash({ view: 'ratio', gate: null, lab: null, rstage: 'vault' }), '#/ratio/vault');
   assert.equal(parseHash('#/atom/1/extra').valid, false);
   assert.equal(parseHash('').route.view, 'reception');
   assert.equal(parseHash('#/elements/').route.view, 'elements_hub');

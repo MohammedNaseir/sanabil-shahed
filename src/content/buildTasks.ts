@@ -6,6 +6,7 @@ import { ATOM_GATES } from './atom';
 import { ELEMENT_LABS } from './elements';
 import type { ElementStation, Item } from './types';
 import { massTaskTable } from './massTasks';
+import { ratioTaskTable } from './ratioTasks';
 import { WHEEL_POINTS } from './wheel';
 
 const itemPoints = (it: Item) => it.p ?? 1;
@@ -38,5 +39,5 @@ export function buildTaskTable(): Record<string, number> {
       table[`${L.id}.${s.id}.done`] = 0;
     }
   }
-  return { ...table, ...massTaskTable() };
+  return { ...table, ...massTaskTable(), ...ratioTaskTable() };
 }

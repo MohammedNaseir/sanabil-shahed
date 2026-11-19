@@ -30,8 +30,8 @@ test('مختبرات العناصر: «عجلة الصقور» أولاً ثم �
   ]);
   const counts = ELEMENT_LABS.map(L => L.stations.map(s => stationTasks(L.id, s).length));
   assert.deepEqual(counts, [[5, 2, 2, 1, 3, 2, 7, 6], [5, 3, 2, 1, 3, 2, 6, 6], [5, 2, 2, 1, 3, 2, 6, 6]]);
-  assert.deepEqual(LAB_MAX, { at: 70, ca: 43, su: 43, si: 42, ms: 385 });
-  assert.equal(Object.keys(TASK_POINTS).length, 174);
+  assert.deepEqual(LAB_MAX, { at: 70, ca: 43, su: 43, si: 42, ms: 385, rt: 370 });
+  assert.equal(Object.keys(TASK_POINTS).length, 197);
 });
 
 test('جدول المهام الخفيف (taskTable.ts) يطابق المحتوى', () => {

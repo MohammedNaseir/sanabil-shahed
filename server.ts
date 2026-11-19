@@ -116,7 +116,7 @@ function requireTeacher(req: Request, res: Response, next: NextFunction): void {
 const DATA_DIR = path.resolve(process.env.LAB_DATA_DIR || path.join(ROOT, 'data'));
 const DB_FILE = path.join(DATA_DIR, 'lab-store.json');
 
-type LabPoints = { at: number; ca: number; su: number; si: number; ms: number };
+type LabPoints = { at: number; ca: number; su: number; si: number; ms: number; rt: number };
 
 export interface Journal {
   notebook: Record<string, { p: string; o: string; c: string }>;
@@ -218,7 +218,7 @@ const DEFAULT_SESSION: LabSessionConfig = {
 
 function recalcTotals(s: StudentRecord) {
   const t = labTotals(s.tasks);
-  s.labPoints = { at: t.at, ca: t.ca, su: t.su, si: t.si, ms: t.ms };
+  s.labPoints = { at: t.at, ca: t.ca, su: t.su, si: t.si, ms: t.ms, rt: t.rt };
   s.totalPoints = t.total;
 }
 
@@ -261,7 +261,7 @@ function normalizeStudent(raw: Partial<StudentRecord> & { id: string }): Student
     falconTitle: raw.falconTitle || 'صقر كيميائي - باحث مختبر',
     affiliation: raw.affiliation || 'صقور أ. شهد في منصة سنابل',
     tasks: cleanTasks(raw.tasks),
-    labPoints: { at: 0, ca: 0, su: 0, si: 0, ms: 0 },
+    labPoints: { at: 0, ca: 0, su: 0, si: 0, ms: 0, rt: 0 },
     totalPoints: 0,
     ...(legacy ? { legacy } : {}),
     ...(raw.journal ? { journal: cleanJournal(raw.journal) } : {}),
